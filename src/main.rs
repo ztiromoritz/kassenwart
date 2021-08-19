@@ -3,6 +3,10 @@ use rhai::{ASTNode, Engine, Expr, ParseError, AST};
 use std::io;
 use smartstring;
 
+mod formula;
+mod field;
+
+
 fn main() -> Result<(), ParseError> {
     let engine = Engine::new();
     println!("Input a formula");
@@ -24,7 +28,6 @@ fn collect_all_variables(ast: &AST) -> Vec<smartstring::SmartString<Compact>>
         match path.last().expect("Always current node") {
             ASTNode::Expr(Expr::Variable(_, _, name)) => {
                 let (_,_,id) = (**name).clone();
-                
                 vec.push(id);
                 true
             }
@@ -32,4 +35,14 @@ fn collect_all_variables(ast: &AST) -> Vec<smartstring::SmartString<Compact>>
         }
     });
     vec
+}
+
+#[cfg(test)]
+mod test {
+    //  use super::*;
+    
+    #[test]
+    fn noop(){
+        assert!(true);
+    }
 }
