@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	//siv.add_layer(TextView::new("Hello cursive! Press <q> to quit."));
 
-    siv.add_layer(TableView{ sheet: my_sheet});
+    siv.add_fullscreen_layer(TableView{ sheet: my_sheet});
 
 	siv.run();
 
