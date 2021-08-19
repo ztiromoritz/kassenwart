@@ -1,4 +1,5 @@
 #[derive(PartialEq)]
-pub struct FormulaData {
-    pub value: String
+#[derive(Debug)]
+pub struct FormulaData<'a> {
+    pub value: &'a str
 }

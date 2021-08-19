@@ -1,15 +1,17 @@
 use crate::formula::FormulaData;
 
-struct Field {
-    value: FieldValue,
+#[derive(Debug)]
+pub struct Field <'a> {
+    pub value: FieldValue<'a>,
 }
 
 #[derive(PartialEq)]
-pub enum FieldValue {
+#[derive(Debug)]
+pub enum FieldValue<'a> {
     Empty(),
     Number(i32),
-    Text(String),
-    Formula(FormulaData),
+    Text(&'a str),
+    Formula(FormulaData<'a>),
 }
 
 pub fn raw_to_value(raw_value: &str) -> FieldValue {
@@ -17,12 +19,12 @@ pub fn raw_to_value(raw_value: &str) -> FieldValue {
         return FieldValue::Empty()
     }else if raw_value.starts_with("=") {
         return FieldValue::Formula(FormulaData {
-            value : String::from(raw_value)    
+            value : &raw_value    
         })
     }else {
         match raw_value.parse::<i32>() {
             Ok(n) => FieldValue::Number(n),
-            Err(_) => FieldValue::Text(String::from(raw_value)),
+            Err(_) => FieldValue::Text(&raw_value),
         }
     }
 }
