@@ -1,3 +1,4 @@
+use crate::raw_to_value;
 use crate::field::{Field, FieldValue};
 
 
@@ -22,6 +23,10 @@ impl <'a> Sheet<'a> {
             data
         }
     }
+
+   pub fn add(mut self:Self, value: FieldValue<'a>){
+       self.data[0][0].value = value;
+   } 
 }
 
 

@@ -5,6 +5,9 @@ pub struct Field <'a> {
     pub value: FieldValue<'a>,
 }
 
+
+
+
 #[derive(PartialEq)]
 #[derive(Debug)]
 pub enum FieldValue<'a> {
@@ -19,12 +22,12 @@ pub fn raw_to_value(raw_value: &str) -> FieldValue {
         return FieldValue::Empty()
     }else if raw_value.starts_with("=") {
         return FieldValue::Formula(FormulaData {
-            value : &raw_value    
+            value : &raw_value.clone()    
         })
     }else {
         match raw_value.parse::<i32>() {
-            Ok(n) => FieldValue::Number(n),
-            Err(_) => FieldValue::Text(&raw_value),
+            Ok(n) => FieldValue::Number(n.clone()),
+            Err(_) => FieldValue::Text(&raw_value.clone()),
         }
     }
 }

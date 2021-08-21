@@ -35,14 +35,6 @@ impl cursive::view::View for TableView<'static> {
                 };   
             } 
         }
-
-        /*
-        printer.with_color(
-            ColorStyle::new(Color::Dark(BaseColor::Black), Color::RgbLowRes(3, 5, 3)),
-            |printer| printer.print((20, 20), "Hello World"),
-        );
-        */
-
     }
 
     fn required_size(&mut self, _: Vec2) -> Vec2 {
