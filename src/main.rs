@@ -165,20 +165,28 @@ pub struct TableView2 {
 impl cursive::view::View for TableView2 {
     fn draw(&self, printer: &cursive::Printer<'_, '_>) {
         for (x, column) in self.sheet.data.iter().enumerate() {
+            let name = "ABCDEFGHIJKLMNOPQRSTUVW".chars().nth(x).get_or_insert('_').to_string();
+            let x = x * 30;
+            printer.with_color(
+                ColorStyle::from(RgbLowRes(5, 1, 1)), |printer| {
+                            printer.print((x, 0), &name )
+                        });
             for (y, cell) in column.iter().enumerate() {
+                let y = y + 1;
                 match cell {
                     FormValue::Text(str) => {
-                        printer.print((x * 30, y), str);
+                        printer.print((x, y), str);
                     }
-                    FormValue::Number(n) => printer.with_color(ColorStyle::secondary(), |printer| {
-                        printer.print((x * 30, y), &n.to_string())
-                    }),
+                    FormValue::Number(n) => printer
+                        .with_color(ColorStyle::secondary(), |printer| {
+                            printer.print((x, y), &n.to_string())
+                        }),
                     FormValue::Formula(FormulaData2 { text }) => printer
-                        .with_color(ColorStyle::from(RgbLowRes(5,1,1)), |printer| {
-                            printer.print((x * 30, y), &text)
+                        .with_color(ColorStyle::from(RgbLowRes(5, 1, 1)), |printer| {
+                            printer.print((x, y), &text)
                         }),
                     _ => {
-                        printer.print((x * 30, y), "");
+                        printer.print((x, y), "");
                     }
                 };
             }
