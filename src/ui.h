@@ -11,6 +11,7 @@ typedef struct _ui_cursor *UiCursor;
 void ui_draw_col_head(UiState);
 void ui_draw_row_head(UiState);
 void ui_draw_status_line(UiState);
+void ui_draw_cells(UiState);
 void ui_draw_cursor(UiState);
 
 // Actions

@@ -16,33 +16,34 @@ int main() {
   noecho();
   curs_set(0);
 
-  UiState uiState = ui_init();
+  UiState ui_state = ui_init();
   int ch;
   do {
     // update
     switch (ch) {
     case KEY_UP:
     case 'k':
-      ui_up(uiState);
+      ui_up(ui_state);
       break;
     case KEY_DOWN:
     case 'j':
-      ui_down(uiState);
+      ui_down(ui_state);
       break;
     case KEY_LEFT:
     case 'h':
-      ui_left(uiState);
+      ui_left(ui_state);
       break;
     case KEY_RIGHT:
     case 'l':
-      ui_right(uiState);
+      ui_right(ui_state);
       break;
     }
     // draw
-    ui_draw_row_head(uiState);
-    ui_draw_col_head(uiState);
-    ui_draw_status_line(uiState);
-    ui_draw_cursor(uiState);
+    ui_draw_row_head(ui_state);
+    ui_draw_col_head(ui_state);
+    ui_draw_status_line(ui_state);
+    ui_draw_cells(ui_state);
+    ui_draw_cursor(ui_state);
 
     refresh();
 
@@ -51,7 +52,7 @@ int main() {
   } while (ch != 'q');
 
   endwin();
-  ui_destroy(uiState);
+  ui_destroy(ui_state);
   return 0;
 }
 
