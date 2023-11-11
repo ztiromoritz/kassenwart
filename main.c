@@ -20,14 +20,14 @@ int main() {
 
   WINDOW *window = newwin(0, 0, 0, 0);
 
-  uiInit();
+  ui_init();
   int ch;
   do {
 
-    drawRowHeader(window, &uiState);
-    drawHeader(window, &uiState);
-    drawStatusLine(window, &uiState);
-    drawCursor(window, &uiState);
+    draw_row_header(window, &uiState);
+    draw_col_header(window, &uiState);
+    draw_status_line(window, &uiState);
+    draw_cursor(window, &uiState);
 
     refresh();
 

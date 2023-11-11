@@ -1,5 +1,5 @@
 #include <ncurses.h>
-#ifndef UI_U_   /* Include guard */
+#ifndef UI_U_   
 #define UI_U_
 
 
@@ -8,14 +8,11 @@ typedef struct {
    int cell_y;
 } UiState;
 
-int foo(int x); 
-
-void drawHeader(WINDOW *,UiState *);
-void drawRowHeader(WINDOW *,UiState *);
-void drawStatusLine(WINDOW *,UiState *);
-void drawCursor(WINDOW *, UiState *);
-
-void uiInit();
+void ui_init(WINDOW *);
+void ui_draw_col_head(WINDOW *,UiState *);
+void ui_draw_row_head(WINDOW *,UiState *);
+void ui_draw_status_line(WINDOW *,UiState *);
+void ui_draw_cursor(WINDOW *, UiState *);
 
 
 #endif 
