@@ -1,5 +1,7 @@
+#include <math.h>
 #include <ncurses.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "ui.h"
@@ -11,9 +13,10 @@
 
 #define COL_WIDTH 9
 #define ROW_HEADER_WIDTH 5
-#define MAX_COLS 16
+#define MAX_COLS 36
 #define MAX_ROWS 256
-#define COL_HEADER_CHAR " ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+// TODO: base26
+#define COL_HEADER_CHAR "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 #define ALTERNATE_COLOR_ON(n, odd, even)                                       \
   (n % 2 == 0) ? attron(COLOR_PAIR(even)) : attron(COLOR_PAIR(odd));
@@ -115,14 +118,15 @@ bool ui_cursor_right(UiState ui_state, UiCursor cursor) {
   if (next_col >= MAX_COLS)
     return false;
 
+  int next_width = ui_state->col_width[next_col];
   int next_x = ui_state->col_offset[next_col];
   int max_x = getmaxx(ui_state->window);
-  if (next_x >= max_x)
+  if (next_x + next_width >= max_x)
     return false;
 
   cursor->col = next_col;
   cursor->x = next_x;
-  cursor->width = ui_state->col_width[next_col];
+  cursor->width = next_width;
   return true;
 }
 
@@ -175,6 +179,8 @@ void update_col_offset(UiState ui_state) {
     ui_state->col_offset[c] = curr;
     curr += ui_state->col_width[c];
   }
+  ui_state->main_cursor->width =
+      ui_state->col_width[ui_state->main_cursor->col];
 }
 
 UiState ui_init() {
@@ -186,13 +192,14 @@ UiState ui_init() {
 
   struct _ui_state *ui_state;
   ui_state = malloc(sizeof(*ui_state));
-  ui_state->col_width[0] = 5;
+  ui_state->col_width[0] = ROW_HEADER_WIDTH;
   for (int n = 1; n < MAX_COLS; n++) {
-    ui_state->col_width[n] = 8;
+    ui_state->col_width[n] = COL_WIDTH;
   }
-  update_col_offset(ui_state);
   ui_state->window = newwin(0, 0, 0, 0);
   ui_state->main_cursor = ui_cursor_create(ui_state);
+
+  update_col_offset(ui_state);
 
   return ui_state;
 }
@@ -209,27 +216,80 @@ void ui_destroy(UiState ui_state) {
 void ui_left(UiState ui_state) {
   ui_cursor_left(ui_state, ui_state->main_cursor);
 }
+
 void ui_right(UiState ui_state) {
   ui_cursor_right(ui_state, ui_state->main_cursor);
 }
+
 void ui_up(UiState ui_state) { ui_cursor_up(ui_state, ui_state->main_cursor); }
+
 void ui_down(UiState ui_state) {
   ui_cursor_down(ui_state, ui_state->main_cursor);
 }
 
-void ui_draw_col_head(UiState ui_state) {
+void ui_inc_current_col(UiState ui_state) {
+  int current_column = ui_state->main_cursor->col;
+
   int max_x = getmaxx(ui_state->window);
-  char head[] = "         ";
-  for (int n = 0; col_to_x(n + 1) < max_x; n++) {
+	
+  if ((ui_state->main_cursor->x + ui_state->main_cursor->width) >= max_x)
+    return;
 
-    ALTERNATE_COLOR_ON(n, ODD, EVEN)
+  ui_state->col_width[current_column] =
+      fmin(ui_state->col_width[current_column] + 1, 128);
+  // TODO: check if column exceeds page width
+  update_col_offset(ui_state);
+}
 
-    move(0, ROW_HEADER_WIDTH + n * COL_WIDTH);
-    head[4] = COL_HEADER_CHAR[n];
-    addstr(head);
+void ui_dec_current_col(UiState ui_state) {
+  int current_column = ui_state->main_cursor->col;
+  ui_state->col_width[current_column] =
+      fmax(ui_state->col_width[current_column] - 1, 1);
+  update_col_offset(ui_state);
+}
 
-    ALTERNATE_COLOR_OFF(n, ODD, EVEN)
+void ui_draw_col_head(UiState ui_state) {
+
+  UiCursor cursor = ui_cursor_create(ui_state);
+
+  while (ui_cursor_right(ui_state, cursor)) {
+
+    int pad_mid = 1;
+    int pad_left = (CEIL_DIV((cursor->width - pad_mid), 2)) + pad_mid;
+    int pad_right = (cursor->width - pad_mid) / 2;
+
+    ALTERNATE_COLOR_ON(cursor->col, ODD, EVEN)
+
+    move(cursor->y, cursor->x);
+    printw("%*c%*s",
+           /** TODO: base-26 **/
+           pad_left, COL_HEADER_CHAR[(cursor->col - 1) % 26], pad_right, "");
+
+    ALTERNATE_COLOR_OFF(cursor->col, ODD, EVEN)
   }
+
+  ui_cursor_detroy(cursor);
+}
+
+void ui_draw_row_head(UiState ui_state) {
+
+  UiCursor cursor = ui_cursor_create(ui_state);
+
+  int pad_mid = 3;
+  int pad_left = (CEIL_DIV((cursor->width - pad_mid), 2)) + pad_mid;
+  int pad_right = (cursor->width - pad_mid) / 2;
+
+  while (ui_cursor_down(ui_state, cursor)) {
+
+    ALTERNATE_COLOR_ON(cursor->row, ODD, EVEN)
+
+    move(cursor->y, cursor->x);
+    printw("%*d%*s", pad_left, cursor->y, pad_right, "");
+
+    ALTERNATE_COLOR_OFF(cursor->row, ODD, EVEN)
+  }
+
+  ui_cursor_detroy(cursor);
 }
 
 void ui_draw_status_line(UiState ui_state) {
@@ -243,24 +303,6 @@ void ui_draw_status_line(UiState ui_state) {
   move(max_y - 1, max_x - 10);
   printw("$%c%d     ", COL_HEADER_CHAR[ui_state->cell_x], ui_state->cell_y);
   attroff(COLOR_PAIR(STATUS));
-}
-
-void ui_draw_row_head(UiState ui_state) {
-  UiCursor cursor = ui_cursor_create(ui_state);
-  int pad_mid=3;
-  int pad_left= ( CEIL_DIV((cursor->width - pad_mid), 2)) + pad_mid;
-  int pad_right = (cursor->width - pad_mid) / 2;
-  while (ui_cursor_down(ui_state, cursor)) {
-    ALTERNATE_COLOR_ON(cursor->row, ODD, EVEN)
-    move(cursor->y, cursor->x);
-    char *out;
-
-    asprintf(&out,"%*d%*s",pad_left, cursor->y, pad_right, "");
-    //asprintf(&out,"%d %d %d",pad_left, pad_right, cursor->width);
-    printw(out);
-    ALTERNATE_COLOR_OFF(cursor->row, ODD, EVEN)
-  }
-  ui_cursor_detroy(cursor);
 }
 
 void ui_draw_cursor(UiState ui_state) {

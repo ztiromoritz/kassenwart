@@ -19,5 +19,7 @@ void ui_left(UiState);
 void ui_right(UiState);
 void ui_up(UiState);
 void ui_down(UiState);
+void ui_dec_current_col(UiState);
+void ui_inc_current_col(UiState);
 
 #endif

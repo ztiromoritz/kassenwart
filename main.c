@@ -37,6 +37,12 @@ int main() {
     case 'l':
       ui_right(ui_state);
       break;
+    case '+':
+      ui_inc_current_col(ui_state);
+      break;
+    case '-':
+      ui_dec_current_col(ui_state);
+      break;
     }
     // draw
     ui_draw_row_head(ui_state);
