@@ -1,19 +1,22 @@
-#include <ncurses.h>
-#ifndef UI_U_   
+#ifndef UI_U_
 #define UI_U_
 
+typedef struct _ui_state *UiState;
+UiState ui_init();
+void ui_destroy(UiState);
 
-typedef struct {
-   int cell_x;
-   int cell_y;
-} UiState;
+typedef struct _ui_cursor *UiCursor;
 
-void ui_init(WINDOW *);
-void ui_draw_col_head(WINDOW *,UiState *);
-void ui_draw_row_head(WINDOW *,UiState *);
-void ui_draw_status_line(WINDOW *,UiState *);
-void ui_draw_cursor(WINDOW *, UiState *);
+// Draw
+void ui_draw_col_head(UiState);
+void ui_draw_row_head(UiState);
+void ui_draw_status_line(UiState);
+void ui_draw_cursor(UiState);
 
+// Actions
+void ui_left(UiState);
+void ui_right(UiState);
+void ui_up(UiState);
+void ui_down(UiState);
 
-#endif 
-
+#endif

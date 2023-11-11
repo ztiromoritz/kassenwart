@@ -1,58 +1,57 @@
-#include <math.h> 
-#include <stdio.h> 
-#include <string.h>
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "src/ui.h"
 #include <ncurses.h>
 
 int main() {
 
-  UiState uiState = {.cell_x = 0, .cell_y = 0};
-
   initscr();
   cbreak();
-  keypad(stdscr, TRUE); 
-  noecho();             
+  keypad(stdscr, TRUE);
+  noecho();
   curs_set(0);
 
-  WINDOW *window = newwin(0, 0, 0, 0);
-
-  ui_init();
+  UiState uiState = ui_init();
   int ch;
   do {
-
-    draw_row_header(window, &uiState);
-    draw_col_header(window, &uiState);
-    draw_status_line(window, &uiState);
-    draw_cursor(window, &uiState);
+    // update
+    switch (ch) {
+    case KEY_UP:
+    case 'k':
+      ui_up(uiState);
+      break;
+    case KEY_DOWN:
+    case 'j':
+      ui_down(uiState);
+      break;
+    case KEY_LEFT:
+    case 'h':
+      ui_left(uiState);
+      break;
+    case KEY_RIGHT:
+    case 'l':
+      ui_right(uiState);
+      break;
+    }
+    // draw
+    ui_draw_row_head(uiState);
+    ui_draw_col_head(uiState);
+    ui_draw_status_line(uiState);
+    ui_draw_cursor(uiState);
 
     refresh();
 
     ch = getch();
-    switch (ch) {
-    case KEY_UP:
-    case 'k':
-      uiState.cell_y = fmax(uiState.cell_y - 1, 0);
-      break;
-    case KEY_DOWN:
-    case 'j':
-      uiState.cell_y = fmin(uiState.cell_y + 1, 256 /*TODO const*/);
-      break;
-    case KEY_LEFT:
-    case 'h':
-      uiState.cell_x = fmax(uiState.cell_x - 1, 0);
-      break;
-    case KEY_RIGHT:
-    case 'l':
-      uiState.cell_x = fmin(uiState.cell_x + 1, 16 /*TODO const*/);
-      break;
-    }
+
   } while (ch != 'q');
 
   endwin();
+  ui_destroy(uiState);
   return 0;
 }
 
