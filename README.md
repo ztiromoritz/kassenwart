@@ -7,3 +7,4 @@ Learning C while writing a TUI spreadsheet editor like VisiCalc and Lotus-1-2-3.
 # Links & Notes
  * https://www.linuxjournal.com/content/programming-color-ncurses
  * https://www.cs.yale.edu/homes/aspnes/pinewiki/C(2f)Iterators.html
+ * https://cheuksblog.ca/2015-02-04-ncurses-editor-tutorial-03/

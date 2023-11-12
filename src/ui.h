@@ -22,4 +22,6 @@ void ui_down(UiState);
 void ui_dec_current_col(UiState);
 void ui_inc_current_col(UiState);
 
+void ui_open_editor(UiState);
+
 #endif

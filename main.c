@@ -43,6 +43,10 @@ int main() {
     case '-':
       ui_dec_current_col(ui_state);
       break;
+    case 'i':
+      ui_open_editor(ui_state);
+      // TODO: editor handling loop
+      break;
     }
     // draw
     ui_draw_row_head(ui_state);

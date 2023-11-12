@@ -1,3 +1,4 @@
+#include <form.h>
 #include <math.h>
 #include <ncurses.h>
 #include <stdbool.h>
@@ -231,7 +232,7 @@ void ui_inc_current_col(UiState ui_state) {
   int current_column = ui_state->main_cursor->col;
 
   int max_x = getmaxx(ui_state->window);
-	
+
   if ((ui_state->main_cursor->x + ui_state->main_cursor->width) >= max_x)
     return;
 
@@ -324,10 +325,59 @@ void ui_draw_cells(UiState ui_state) {
     if (cursor->col == 0 || cursor->row == 0) {
       continue;
     }
-    move(cursor->y, cursor->x);
+    wmove(ui_state->window,cursor->y, cursor->x);
     for (int i = 0; i < cursor->width; i++) {
       addstr("-");
     }
   } while (ui_cursor_next(ui_state, cursor));
   ui_cursor_detroy(cursor);
+}
+
+//
+// Editor
+//
+void ui_open_editor(UiState ui_state) {
+  FORM *editor_form;
+  FIELD *editor_field[2];
+  int ch;
+  /*
+    WINDOW *my_form_win;
+    int rows, cols;
+    */
+
+  editor_field[0] = new_field(10, 40, 1, 1, 0, 0);
+  editor_field[1] = NULL;
+
+  set_field_back(editor_field[0], A_UNDERLINE);
+  set_field_fore(editor_field[0], STATUS);
+  field_opts_off(editor_field[0], O_AUTOSKIP);
+  field_opts_off(editor_field[0], O_AUTOSKIP);
+
+  editor_form = new_form(editor_field);
+  post_form(editor_form);
+  set_current_field(editor_form, editor_field[0]);
+
+  /*
+    scale_form(editor_form, &rows, &cols);
+    my_form_win = newwin(rows + 4, cols + 4, 4, 4);
+    keypad(my_form_win, TRUE);
+    set_form_win(editor_form, my_form_win);
+    set_form_sub(editor_form, derwin(my_form_win, rows, cols, 2, 2));
+    box(my_form_win, 0, 0);
+
+    wrefresh(my_form_win);
+  */
+
+  refresh();
+
+  while ((ch = getch()) != 'q') {
+    form_driver(editor_form, ch);
+    
+    ui_draw_row_head(ui_state);
+    refresh(); 
+
+  }
+  unpost_form(editor_form);
+  free_form(editor_form);
+  free_field(editor_field[0]);
 }
