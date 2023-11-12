@@ -8,5 +8,4 @@ void editor_destroy(EditorState);
 // Draw
 void editor_draw(EditorState);
 
-
 #endif
