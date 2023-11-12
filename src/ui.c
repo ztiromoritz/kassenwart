@@ -19,10 +19,11 @@
 // TODO: base26
 #define COL_HEADER_CHAR "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-#define ALTERNATE_COLOR_ON(n, odd, even)                                       \
-  (n % 2 == 0) ? attron(COLOR_PAIR(even)) : attron(COLOR_PAIR(odd));
-#define ALTERNATE_COLOR_OFF(n, odd, even)                                      \
-  (n % 2 == 0) ? attroff(COLOR_PAIR(even)) : attroff(COLOR_PAIR(odd));
+#define ALTERNATE_COLOR_ON(win, n, odd, even)                                  \
+  (n % 2 == 0) ? wattron(win, COLOR_PAIR(even)) : wattron(win, COLOR_PAIR(odd));
+#define ALTERNATE_COLOR_OFF(win, n, odd, even)                                 \
+  (n % 2 == 0) ? wattroff(win, COLOR_PAIR(even))                               \
+               : wattroff(win, COLOR_PAIR(odd));
 
 // Division of positive integers which rounds up
 #define CEIL_DIV(a, b) a / b + (a % b != 0)
@@ -36,10 +37,6 @@
 int col_to_x(int n) { return n * COL_WIDTH + ROW_HEADER_WIDTH; }
 
 struct _ui_state {
-  // TODO: make cel_x/y to a UiCursor
-  int cell_x;
-  int cell_y;
-
   int col_width[MAX_COLS];
   int col_offset[MAX_COLS];
   WINDOW *window;
@@ -200,13 +197,14 @@ UiState ui_init() {
   ui_state->window = newwin(0, 0, 0, 0);
   ui_state->main_cursor = ui_cursor_create(ui_state);
 
+  //box(ui_state->window, 0,0);
   update_col_offset(ui_state);
 
   return ui_state;
 }
 
 void ui_destroy(UiState ui_state) {
-  delwin(ui_state->window); //??
+  delwin(ui_state->window);
   ui_cursor_detroy(ui_state->main_cursor);
   free(ui_state);
 }
@@ -249,8 +247,13 @@ void ui_dec_current_col(UiState ui_state) {
   update_col_offset(ui_state);
 }
 
+//
+// DRAW
+//
+
 void ui_draw_col_head(UiState ui_state) {
 
+  WINDOW *win = ui_state->window;
   UiCursor cursor = ui_cursor_create(ui_state);
 
   while (ui_cursor_right(ui_state, cursor)) {
@@ -259,14 +262,14 @@ void ui_draw_col_head(UiState ui_state) {
     int pad_left = (CEIL_DIV((cursor->width - pad_mid), 2)) + pad_mid;
     int pad_right = (cursor->width - pad_mid) / 2;
 
-    ALTERNATE_COLOR_ON(cursor->col, ODD, EVEN)
+    ALTERNATE_COLOR_ON(win, cursor->col, ODD, EVEN)
 
-    move(cursor->y, cursor->x);
-    printw("%*c%*s",
+    wmove(win,cursor->y, cursor->x);
+    wprintw(win, "%*c%*s",
            /** TODO: base-26 **/
            pad_left, COL_HEADER_CHAR[(cursor->col - 1) % 26], pad_right, "");
 
-    ALTERNATE_COLOR_OFF(cursor->col, ODD, EVEN)
+    ALTERNATE_COLOR_OFF(win, cursor->col, ODD, EVEN)
   }
 
   ui_cursor_detroy(cursor);
@@ -274,6 +277,7 @@ void ui_draw_col_head(UiState ui_state) {
 
 void ui_draw_row_head(UiState ui_state) {
 
+  WINDOW *win = ui_state->window;
   UiCursor cursor = ui_cursor_create(ui_state);
 
   int pad_mid = 3;
@@ -282,55 +286,85 @@ void ui_draw_row_head(UiState ui_state) {
 
   while (ui_cursor_down(ui_state, cursor)) {
 
-    ALTERNATE_COLOR_ON(cursor->row, ODD, EVEN)
+    ALTERNATE_COLOR_ON(win, cursor->row, ODD, EVEN)
 
-    move(cursor->y, cursor->x);
-    printw("%*d%*s", pad_left, cursor->y, pad_right, "");
+    wmove(win, cursor->y, cursor->x);
+    wprintw(win, "%*d%*s", pad_left, cursor->y, pad_right, "");
 
-    ALTERNATE_COLOR_OFF(cursor->row, ODD, EVEN)
+    ALTERNATE_COLOR_OFF(win, cursor->row, ODD, EVEN)
   }
 
   ui_cursor_detroy(cursor);
 }
 
 void ui_draw_status_line(UiState ui_state) {
-  int max_y = getmaxy(ui_state->window);
-  int max_x = getmaxx(ui_state->window);
-  move(max_y - 1, 0);
-  attron(COLOR_PAIR(STATUS));
+  WINDOW *win = ui_state->window;
+
+  int max_y = getmaxy(win);
+  int max_x = getmaxx(win);
+  wmove(win, max_y - 1, 0);
+  wattron(win, COLOR_PAIR(STATUS));
   for (int i = 0; i < max_x; i++) {
-    addstr(" ");
+    waddstr(win, " ");
   }
-  move(max_y - 1, max_x - 10);
-  printw("$%c%d     ", COL_HEADER_CHAR[ui_state->cell_x], ui_state->cell_y);
-  attroff(COLOR_PAIR(STATUS));
+  wmove(win, max_y - 1, max_x - 10);
+  // TODO: base-26
+  wprintw(win, "$%c%d     ", COL_HEADER_CHAR[ui_state->main_cursor->col],
+          ui_state->main_cursor->row);
+  wattroff(win, COLOR_PAIR(STATUS));
 }
 
 void ui_draw_cursor(UiState ui_state) {
+
+  WINDOW *win = ui_state->window;
+
   int x = ui_state->main_cursor->x;
   int y = ui_state->main_cursor->y;
   int width = ui_state->main_cursor->width;
-  move(y, x);
-  attron(COLOR_PAIR(STATUS));
+
+  wmove(win,y, x);
+  wattron(win,COLOR_PAIR(STATUS));
   for (int i = 0; i < width; i++)
-    addstr("x");
-  attroff(COLOR_PAIR(STATUS));
-  move(0, 0);
-  printw("%d:%d:%d", x, y, width);
+    waddstr(win,"x");
+  wattroff(win,COLOR_PAIR(STATUS));
+  wmove(win,0, 0);
+  wprintw(win,"%d:%d:%d", x, y, width);
+
 }
 
 void ui_draw_cells(UiState ui_state) {
+
+  WINDOW *win = ui_state->window;
   UiCursor cursor = ui_cursor_create(ui_state);
+
   do {
     if (cursor->col == 0 || cursor->row == 0) {
       continue;
     }
-    wmove(ui_state->window,cursor->y, cursor->x);
+    wmove(win, cursor->y, cursor->x);
     for (int i = 0; i < cursor->width; i++) {
-      addstr("-");
+      waddstr(win,"-");
     }
   } while (ui_cursor_next(ui_state, cursor));
+
   ui_cursor_detroy(cursor);
+
+}
+
+void ui_draw(UiState ui_state){
+
+    ui_draw_row_head(ui_state);
+    ui_draw_col_head(ui_state);
+    ui_draw_status_line(ui_state);
+    ui_draw_cells(ui_state);
+    ui_draw_cursor(ui_state);
+
+   // wrefresh(ui_state->window);
+    //refresh(); // is this needed
+    refresh();
+    doupdate();
+    wrefresh(ui_state->window);
+	       
 }
 
 //
@@ -372,10 +406,9 @@ void ui_open_editor(UiState ui_state) {
 
   while ((ch = getch()) != 'q') {
     form_driver(editor_form, ch);
-    
-    ui_draw_row_head(ui_state);
-    refresh(); 
 
+    ui_draw_row_head(ui_state);
+    refresh();
   }
   unpost_form(editor_form);
   free_form(editor_form);
