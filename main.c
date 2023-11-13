@@ -2,11 +2,12 @@
 #include <lua.h>
 #include <lualib.h>
 #include <math.h>
+#include <ncurses.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "src/editor.h"
 #include "src/ui.h"
-#include <ncurses.h>
 
 int main() {
 
@@ -15,8 +16,10 @@ int main() {
   keypad(stdscr, TRUE);
   noecho();
   curs_set(0);
+  bool editor_open = FALSE;
 
   UiState ui_state = ui_init();
+  EditorState editor_state = editor_init();
   int ch;
   do {
     // update
@@ -44,12 +47,16 @@ int main() {
       ui_dec_current_col(ui_state);
       break;
     case 'i':
-      ui_open_editor(ui_state);
-      // TODO: editor handling loop
+      // ui_open_editor(ui_state);
+      //  TO: editor handling loop
+      editor_open = !editor_open;
       break;
     }
     // draw
     ui_draw(ui_state);
+    if (editor_open) {
+      editor_draw(editor_state);
+    }
 
     ch = getch();
 
@@ -57,6 +64,7 @@ int main() {
 
   endwin();
   ui_destroy(ui_state);
+  editor_destroy(editor_state);
+
   return 0;
 }
-
