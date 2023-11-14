@@ -7,64 +7,63 @@
 #include <string.h>
 
 #include "src/editor.h"
+#include "src/modes.h"
 #include "src/ui.h"
 
 int main() {
+  FILE *log;
+  log = fopen("out.txt", "a");
+  fprintf(log, "\nlog:\n");
+  // fflush(log);
 
   initscr();
   cbreak();
-  keypad(stdscr, TRUE);
+  // timeout(0);
+  // nocbreak();
+  // /notimeout(stdscr,TRUE);
+  keypad(stdscr, FALSE);
+  fprintf(log,"notimeout %d\n",notimeout(stdscr, FALSE));
+  raw();
   noecho();
   curs_set(0);
-  bool editor_open = FALSE;
+
+  timeout(5);
 
   UiState ui_state = ui_init();
   EditorState editor_state = editor_init();
   int ch;
+  int mode = MODE_INIT;
   do {
     // update
-    switch (ch) {
-    case KEY_UP:
-    case 'k':
-      ui_up(ui_state);
-      break;
-    case KEY_DOWN:
-    case 'j':
-      ui_down(ui_state);
-      break;
-    case KEY_LEFT:
-    case 'h':
-      ui_left(ui_state);
-      break;
-    case KEY_RIGHT:
-    case 'l':
-      ui_right(ui_state);
-      break;
-    case '+':
-      ui_inc_current_col(ui_state);
-      break;
-    case '-':
-      ui_dec_current_col(ui_state);
-      break;
-    case 'i':
-      // ui_open_editor(ui_state);
-      //  TO: editor handling loop
-      editor_open = !editor_open;
-      break;
-    }
     // draw
-    ui_draw(ui_state);
-    if (editor_open) {
+    switch (mode) {
+    case MODE_INIT:
+      // TODO:
+      mode = MODE_SHEET;
+      break;
+    case MODE_SHEET:
+      ui_draw(ui_state);
+      mode = ui_update(ui_state, ch);
+      break;
+    case MODE_EDITOR:
       editor_draw(editor_state);
+      mode = editor_update(editor_state, ch);
+      break;
     }
 
+    // refresh();
+    doupdate();
     ch = getch();
-
-  } while (ch != 'q');
+    if (ch != -1) {
+      fprintf(log, "%s - 0x%02x\n", keyname(ch), ch);
+      fflush(log);
+    }
+  } while (mode != MODE_EXIT);
 
   endwin();
   ui_destroy(ui_state);
   editor_destroy(editor_state);
 
+  fclose(log);
   return 0;
 }

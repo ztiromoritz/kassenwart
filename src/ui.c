@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "ui.h"
+#include "modes.h"
 
 #define HEADER 1
 #define ODD 2
@@ -197,7 +198,7 @@ UiState ui_init() {
   ui_state->window = newwin(0, 0, 0, 0);
   ui_state->main_cursor = ui_cursor_create(ui_state);
 
-  //box(ui_state->window, 0,0);
+  // box(ui_state->window, 0,0);
   update_col_offset(ui_state);
 
   return ui_state;
@@ -264,10 +265,10 @@ void ui_draw_col_head(UiState ui_state) {
 
     ALTERNATE_COLOR_ON(win, cursor->col, ODD, EVEN)
 
-    wmove(win,cursor->y, cursor->x);
+    wmove(win, cursor->y, cursor->x);
     wprintw(win, "%*c%*s",
-           /** TODO: base-26 **/
-           pad_left, COL_HEADER_CHAR[(cursor->col - 1) % 26], pad_right, "");
+            /** TODO: base-26 **/
+            pad_left, COL_HEADER_CHAR[(cursor->col - 1) % 26], pad_right, "");
 
     ALTERNATE_COLOR_OFF(win, cursor->col, ODD, EVEN)
   }
@@ -322,14 +323,13 @@ void ui_draw_cursor(UiState ui_state) {
   int y = ui_state->main_cursor->y;
   int width = ui_state->main_cursor->width;
 
-  wmove(win,y, x);
-  wattron(win,COLOR_PAIR(STATUS));
+  wmove(win, y, x);
+  wattron(win, COLOR_PAIR(STATUS));
   for (int i = 0; i < width; i++)
-    waddstr(win,"x");
-  wattroff(win,COLOR_PAIR(STATUS));
-  wmove(win,0, 0);
-  wprintw(win,"%d:%d:%d", x, y, width);
-
+    waddstr(win, "x");
+  wattroff(win, COLOR_PAIR(STATUS));
+  wmove(win, 0, 0);
+  wprintw(win, "%d:%d:%d", x, y, width);
 }
 
 void ui_draw_cells(UiState ui_state) {
@@ -343,28 +343,63 @@ void ui_draw_cells(UiState ui_state) {
     }
     wmove(win, cursor->y, cursor->x);
     for (int i = 0; i < cursor->width; i++) {
-      waddstr(win,"-");
+      waddstr(win, "-");
     }
   } while (ui_cursor_next(ui_state, cursor));
 
   ui_cursor_detroy(cursor);
-
 }
 
-void ui_draw(UiState ui_state){
+void ui_draw(UiState ui_state) {
 
-    ui_draw_row_head(ui_state);
-    ui_draw_col_head(ui_state);
-    ui_draw_status_line(ui_state);
-    ui_draw_cells(ui_state);
-    ui_draw_cursor(ui_state);
+  // ui draws its own cursor
+  curs_set(0);
+  ui_draw_row_head(ui_state);
+  ui_draw_col_head(ui_state);
+  ui_draw_status_line(ui_state);
+  ui_draw_cells(ui_state);
+  ui_draw_cursor(ui_state);
 
-   // wrefresh(ui_state->window);
-    //refresh(); // is this needed
-    refresh();
-    doupdate();
-    wrefresh(ui_state->window);
-	       
+  // wrefresh(ui_state->window);
+  // refresh(); // is this needed
+  refresh();
+  doupdate();
+  wrefresh(ui_state->window);
+}
+
+int ui_update(UiState ui_state, int ch){
+// update
+    switch (ch) {
+    case KEY_UP:
+    case 'k':
+      ui_up(ui_state);
+      break;
+    case KEY_DOWN:
+    case 'j':
+      ui_down(ui_state);
+      break;
+    case KEY_LEFT:
+    case 'h':
+      ui_left(ui_state);
+      break;
+    case KEY_RIGHT:
+    case 'l':
+      ui_right(ui_state);
+      break;
+    case '+':
+      ui_inc_current_col(ui_state);
+      break;
+    case '-':
+      ui_dec_current_col(ui_state);
+      break;
+    case 'i':
+      // ui_open_editor(ui_state);
+      //  TO: editor handling loop
+      return MODE_EDITOR;
+    case 'q':
+      return MODE_EXIT;
+    }
+    return MODE_SHEET;
 }
 
 //

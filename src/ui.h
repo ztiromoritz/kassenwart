@@ -1,11 +1,14 @@
 #ifndef UI_U_
-#define UI_U_
+#define UI_U_ 
 
 typedef struct _ui_state *UiState;
 UiState ui_init();
 void ui_destroy(UiState);
 
 typedef struct _ui_cursor *UiCursor;
+
+// Update
+int ui_update(UiState, int);
 
 // Draw
 void ui_draw(UiState);
