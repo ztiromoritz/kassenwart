@@ -29,3 +29,10 @@ target_link_libraries(kassenwart
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
+
+## debugging and learning
+## kilo / https://viewsourcecode.org/snaptoken/kilo
+add_executable(editor editor.c)
+
+## Experiment with reading and writing key strokes
+add_executable(readlog scratchpad/readlog.c)
