@@ -12,3 +12,4 @@ Learning C while writing a TUI spreadsheet editor like VisiCalc and Lotus-1-2-3.
  * https://www.nubaria.com/en/blog/?p=289
  * https://github.com/arthurbacci/Teditor
  * https://dev.to/rdentato/utf-8-strings-in-c-2-3-3kp1
+ * https://www.charset.org/utf-8
