@@ -4,70 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <termios.h>
 #include <unistd.h>
 
-struct termios orig_termios;
+#include "./input.h"
 
-void disable_raw_mode() { //
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
-}
-
-void enable_raw_mode() {
-  tcgetattr(STDIN_FILENO, &orig_termios);
-  atexit(disable_raw_mode);
-
-  struct termios raw = orig_termios;
-
-  raw.c_iflag &= ~(BRKINT | INPCK | ISTRIP | IXON | ICRNL);
-  raw.c_oflag &= ~(OPOST);
-  raw.c_cflag &= ~(CS8);
-  raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
-}
-
-#define KEY_TODO 0
-
-#define KEY_CHAR 1
-#define KEY_ESC 2
-#define KEY_RETURN 3
-#define KEY_TAB 4
-#define KEY_BACKSPACE 5
-
-#define KEY_ARROW_UP 10
-#define KEY_ARROW_DOWN 11
-#define KEY_ARROW_LEFT 12
-#define KEY_ARROW_RIGHT 13
-
-#define KEY_CTRL(c) ((unsigned int)c)
-#define KEY_CTRL_FROM_RAW(n) (n + 97) // ??? TODO test
-#define KEY_CTRL_A 97
-#define KEY_CTRL_B 98
-#define KEY_CTRL_C 99
-#define KEY_CTRL_D 100
-#define KEY_CTRL_E 101
-#define KEY_CTRL_F 102
-#define KEY_CTRL_G 103
-#define KEY_CTRL_H 104
-#define KEY_CTRL_I 105
-#define KEY_CTRL_J 106
-#define KEY_CTRL_K 107
-#define KEY_CTRL_L 108
-#define KEY_CTRL_M 109
-#define KEY_CTRL_N 110
-#define KEY_CTRL_O 111
-#define KEY_CTRL_P 112
-#define KEY_CTRL_Q 113
-#define KEY_CTRL_R 114
-#define KEY_CTRL_S 115
-#define KEY_CTRL_T 116
-#define KEY_CTRL_U 117
-#define KEY_CTRL_V 118
-#define KEY_CTRL_W 119
-#define KEY_CTRL_X 120
-#define KEY_CTRL_Y 121
-#define KEY_CTRL_Z 122
 
 // Internal Match
 #define IS_ASCII(b) (((b)&0x80) == 0)
@@ -91,20 +31,11 @@ static uint8_t const _UTF8_LENGTH[16] = {
 #define IS_UTF8_START(b) (((b)&0xc0) == 0xc0)
 #define IS_UTF8_PART(b) ((b & (1 << 7)) && !(b & (1 << 6)))
 
-struct _key_event {
-  uint8_t type;
-  char *name; // Pointer to a constant name. Must not be freed.
-  uint8_t len;
-  char *raw; // The raw data of length len. Must be freed.
-};
-
-typedef struct _key_event *KeyEvent;
 
 struct _key_events {
   int len;
   struct _key_event *events;
 };
-typedef struct _key_events *KeyEvents;
 
 #define BUFFER_SIZE 32  //
 #define TRAILING_SIZE 8 // There is a bit of wiggle room for UTF-8
@@ -121,8 +52,6 @@ struct _input_handler {
 
   struct _key_events events;
 };
-
-typedef struct _input_handler *InputHandler;
 
 void _write_key_event( //
     InputHandler handler,
@@ -282,27 +211,22 @@ void update_key_events(InputHandler h) {
       continue;
     }
     if (IS_UTF8_PART(first)) {
-      // printf("UTF-8 part, parsing error :( \r\n");
       i++;
       continue;
     }
-    // printf(" ¯\\_(ツ)_/¯ %08d \r\n", work[i]);
   }
 }
 
-int main() {
+int example_main() {
   enable_raw_mode();
   InputHandler input_handler = init_input_handler();
   KeyEvents key_events = get_key_events(input_handler);
 
   while (1) {
-    //printf("while\r\n");
     update_key_events(input_handler);
-    //printf("Len %d\r\n", key_events->len);
     for (int i = 0; i < key_events->len; i++) {
       KeyEvent e = &(key_events->events[i]);
       printf("%s type: %d\r\n", e->name, e->type);
-      //printf("here\r\n");
     }
   }
 
