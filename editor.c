@@ -4,9 +4,11 @@
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
-#include <utils.h>
 
-struct termios orig_termios;
+#include "src/raw.h"
+#include "src/utils.h"
+#include "src/input.h"
+
 
 
 // high level key press handling
@@ -19,22 +21,18 @@ int main() {
 
   enable_raw_mode();
 
-  unsigned char c;
-  while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q') {
-    printf("%4d 0x%2x %08b ('%c')\r\n", c, c, c, c);
-  }
+  InputHandler input_handler = init_input_handler();
+  KeyEvents key_events = get_key_events(input_handler);
   while (1) {
-    unsigned char c = '\0';
-    if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN)
-      die("read");
-    if (iscntrl(c)) {
-      printf("%4d 0x%2x %08b \r\n", c, c, c);
-    } else {
-      printf("%4d 0x%2x %08b ('%c')\r\n", c, c, c, c);
+    update_key_events(input_handler);
+    for (int i = 0; i < key_events->len; i++) {
+      KeyEvent e = &(key_events->events[i]);
+      if(e->type == KEY_CTRL('q'))
+	exit(0);
+      printf("%s type: %d\r\n", e->name, e->type);
     }
-    if (c == 'q')
-      break;
   }
+  free_input_handler(input_handler); // onexit
 
   return 0;
 }

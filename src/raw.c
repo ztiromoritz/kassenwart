@@ -2,8 +2,14 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-struct termios orig_termios;
+#include "utils.h"
+#include "raw.h"
 
+/**
+ * Raw input and output
+ * https://viewsourcecode.org/snaptoken/kilo/03.rawInputAndOutput.html
+ **/
+struct termios orig_termios;
 
 void disable_raw_mode() { //
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)

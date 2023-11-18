@@ -1,3 +1,6 @@
+#ifndef INPUT_H
+#define INPUT_H
+
 #include <stdint.h>
 #define KEY_TODO 0
 
@@ -13,7 +16,7 @@
 #define KEY_ARROW_RIGHT 13
 
 #define KEY_CTRL(c) ((unsigned int)c)
-#define KEY_CTRL_FROM_RAW(n) (n + 97) // ??? TODO test
+#define KEY_CTRL_FROM_RAW(n) (n + 96) 
 #define KEY_CTRL_A 97
 #define KEY_CTRL_B 98
 #define KEY_CTRL_C 99
@@ -41,7 +44,10 @@
 #define KEY_CTRL_Y 121
 #define KEY_CTRL_Z 122
 
-typedef struct _key_event *KeyEvent;
+struct _key_events {
+  int len;
+  struct _key_event *events;
+};
 
 typedef struct _key_events *KeyEvents;
 
@@ -56,8 +62,12 @@ struct _key_event {
   char *raw; 
 };
 
+typedef struct _key_event *KeyEvent;
+
 KeyEvents get_key_events(InputHandler handler);
 
 void update_key_events(InputHandler h);
 
 void free_input_handler(InputHandler handler);
+
+#endif

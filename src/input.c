@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -7,7 +8,6 @@
 #include <unistd.h>
 
 #include "./input.h"
-
 
 // Internal Match
 #define IS_ASCII(b) (((b)&0x80) == 0)
@@ -31,11 +31,6 @@ static uint8_t const _UTF8_LENGTH[16] = {
 #define IS_UTF8_START(b) (((b)&0xc0) == 0xc0)
 #define IS_UTF8_PART(b) ((b & (1 << 7)) && !(b & (1 << 6)))
 
-
-struct _key_events {
-  int len;
-  struct _key_event *events;
-};
 
 #define BUFFER_SIZE 32  //
 #define TRAILING_SIZE 8 // There is a bit of wiggle room for UTF-8
@@ -84,7 +79,7 @@ InputHandler init_input_handler() {
   handler->work_len = 0;
 
   handler->events.len = 0;
-  handler->events.events = malloc(sizeof(struct _key_event)*BUFFER_SIZE); //
+  handler->events.events = malloc(sizeof(struct _key_event) * BUFFER_SIZE); //
 
   return handler;
 }
@@ -105,22 +100,18 @@ void update_key_events(InputHandler h) {
   unsigned char *trailing = h->trailing;
   unsigned char *work = h->work;
 
-  h->buffer_len =
-      read(STDIN_FILENO, buffer, sizeof(unsigned char) * BUFFER_SIZE);
+  ssize_t r = read(STDIN_FILENO, buffer, sizeof(unsigned char) * BUFFER_SIZE);
+  if (r == -1 && errno != EAGAIN)
+    die("input handler: read");
 
+  h->buffer_len = r;
   h->work_len = h->trailing_len + h->buffer_len;
 
-  printf("trailing len %ld\r\n", h->trailing_len);
   // 1. add trailing chars from last call
   memcpy(work, trailing, h->trailing_len);
 
   // 2. copy receive chars from this call
   memcpy(&(work[h->trailing_len]), buffer, h->buffer_len);
-
-  char *debug = malloc(sizeof(unsigned char) * (h->work_len + 1));
-  memcpy(debug, work, h->work_len);
-  debug[h->work_len] = '\0';
-  printf("work %ld %ld %s\r\n", h->work_len, h->trailing_len, debug);
 
   // 3. search for trailing UTF-8 bytes
   int n = 0;
@@ -143,20 +134,22 @@ void update_key_events(InputHandler h) {
       }
     }
   }
+
   // 4. "remove" trailing UTF-8 bytes from end of buffer
   h->work_len = h->trailing_len + h->buffer_len - n;
 
   // 5. copy trailing UTF-8 bytes from end of buffer
   h->trailing_len = n;
-  printf("n %d\r\n", n);
   memcpy(trailing, &(work[h->work_len]), h->trailing_len);
 
-  // 6. Iterate of work buffer and create tokens
+  // 6. Iterate of work buffer and create KeyEvents
   int i = 0;
   while (i < h->work_len) {
-
-    // parse ESC Sequenze
     unsigned char first = work[i];
+
+    //
+    // parse ESC Sequenze
+    //
     if (IS_ESC(first)) {
       printf("ESC branch \r\n");
       if (i + 1 == h->work_len || i + 2 == h->work_len) {
@@ -172,11 +165,19 @@ void update_key_events(InputHandler h) {
         if (work[i + 1] == '[') {
           switch (third) {
           case 'A':
+            _write_key_event(h, KEY_ARROW_UP, "Arrow Up", 3, &work[i]);
+            i += 3;
+            continue;
           case 'B':
+            _write_key_event(h, KEY_ARROW_DOWN, "Arrow Down", 3, &work[i]);
+            i += 3;
+            continue;
           case 'C':
+            _write_key_event(h, KEY_ARROW_RIGHT, "Arrow Right", 3, &work[i]);
+            i += 3;
+            continue;
           case 'D':
-            _write_key_event(h, KEY_TODO, "Arrow", 3, &work[i]);
-            printf("Arrow Key %c\r\n", third);
+            _write_key_event(h, KEY_ARROW_LEFT, "Arrow Left", 3, &work[i]);
             i += 3;
             continue;
           }
@@ -196,7 +197,7 @@ void update_key_events(InputHandler h) {
       } else if (IS_TAB(first)) {
         _write_key_event(h, KEY_TAB, "Tab", 1, &work[i]);
       } else if (IS_CTRL_KEY(first)) {
-        _write_key_event(h, KEY_CTRL_FROM_RAW(first), "CTRL+[]", 1, &work[i]);
+        _write_key_event(h, KEY_CTRL_FROM_RAW(first), "CTRL+<>", 1, &work[i]);
       } else {
         _write_key_event(h, KEY_TODO, "ASCII FS,GS,RS,US", 1, &work[i]);
       }
@@ -210,15 +211,10 @@ void update_key_events(InputHandler h) {
       i += utf8_len;
       continue;
     }
-    if (IS_UTF8_PART(first)) {
-      i++;
-      continue;
-    }
   }
 }
 
 int example_main() {
-  enable_raw_mode();
   InputHandler input_handler = init_input_handler();
   KeyEvents key_events = get_key_events(input_handler);
 

@@ -4,11 +4,11 @@ project(kassenwart C)
 # for the lsp
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-file (GLOB _all_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} src/*.c main.c)
 
-add_executable(kassenwart ${_all_sources})
+file (GLOB _all_libs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} src/*.c main.c)
 
-#set_property(TARGET kassenwart PROPERTY C_STANDARD 11)
+add_executable(kassenwart ${_all_libs})
+
 
 # https://github.com/nicowilliams/inplace/issues/6
 # asprintf needed this
@@ -32,10 +32,8 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
 ## debugging and learning
 ## kilo / https://viewsourcecode.org/snaptoken/kilo
-add_executable(editor editor.c)
+add_executable(editor src/input.c src/utils.c src/raw.c editor.c)
 
 ## Experiment with reading and writing key strokes
 add_executable(readlog scratchpad/readlog.c)
 
-## Experimental read handler
-add_executable(input scratchpad/input.c)
