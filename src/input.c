@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "./input.h"
+#include "./utils.h"
 
 // Internal Match
 #define IS_ASCII(b) (((b)&0x80) == 0)
@@ -31,9 +32,14 @@ static uint8_t const _UTF8_LENGTH[16] = {
 #define IS_UTF8_START(b) (((b)&0xc0) == 0xc0)
 #define IS_UTF8_PART(b) ((b & (1 << 7)) && !(b & (1 << 6)))
 
-
 #define BUFFER_SIZE 32  //
 #define TRAILING_SIZE 8 // There is a bit of wiggle room for UTF-8
+
+struct _key_events {
+  int current;
+  int len;
+  struct _key_event *events;
+};
 
 struct _input_handler {
   unsigned char buffer[BUFFER_SIZE];
@@ -45,7 +51,11 @@ struct _input_handler {
   unsigned char work[BUFFER_SIZE + TRAILING_SIZE];
   ssize_t work_len;
 
-  struct _key_events events;
+  // key events buffer
+  int current_event;
+  int event_buffer_len;
+  struct _key_event *events;
+  // struct _key_events events;
 };
 
 void _write_key_event( //
@@ -54,21 +64,23 @@ void _write_key_event( //
     char *name,         //
     uint8_t len,        //
     unsigned char *data) {
-  int i = handler->events.len;
-  KeyEvent event = &(handler->events.events[i]);
+  int i = handler->event_buffer_len;
+  KeyEvent event = &(handler->events[i]);
+  handler->event_buffer_len++;
+
   event->type = type;
   event->name = name;
   event->len = len;
   event->raw = malloc(sizeof(unsigned char) * len);
   memcpy(event->raw, data, len);
-  handler->events.len++;
+
 }
 
 void _free_key_events(InputHandler handler) {
-  for (int i = 0; i < handler->events.len; i++) {
-    free(handler->events.events[i].raw);
+  for (int i = 0; i < handler->event_buffer_len; i++) {
+    free(handler->events[i].raw);
   }
-  handler->events.len = 0;
+  handler->event_buffer_len = 0;
 }
 
 InputHandler init_input_handler() {
@@ -78,21 +90,30 @@ InputHandler init_input_handler() {
   handler->trailing_len = 0;
   handler->work_len = 0;
 
-  handler->events.len = 0;
-  handler->events.events = malloc(sizeof(struct _key_event) * BUFFER_SIZE); //
+  handler->current_event = 0;
+  handler->event_buffer_len = 0;
+  handler->events = malloc(sizeof(struct _key_event) * BUFFER_SIZE); //
 
   return handler;
 }
 
+void _update_key_events(InputHandler);
+
+KeyEvent next_key_event(InputHandler handler) {
+  if (handler->current_event >= handler->event_buffer_len) {
+    _update_key_events(handler);
+    handler->current_event = 0;
+  }
+  return &(handler->events[handler->current_event++]);
+}
+
 void free_input_handler(InputHandler handler) {
   _free_key_events(handler);
-  free(handler->events.events);
+  free(handler->events);
   free(handler);
 }
 
-KeyEvents get_key_events(InputHandler handler) { return &(handler->events); }
-
-void update_key_events(InputHandler h) {
+void _update_key_events(InputHandler h) {
   // Free possible events from last round
   _free_key_events(h);
 
@@ -162,7 +183,7 @@ void update_key_events(InputHandler h) {
         unsigned char second = work[i + 1];
         unsigned char third = work[i + 2];
         // May be an ESC sequence
-        if (work[i + 1] == '[') {
+        if (second == '[') {
           switch (third) {
           case 'A':
             _write_key_event(h, KEY_ARROW_UP, "Arrow Up", 3, &work[i]);
@@ -216,14 +237,9 @@ void update_key_events(InputHandler h) {
 
 int example_main() {
   InputHandler input_handler = init_input_handler();
-  KeyEvents key_events = get_key_events(input_handler);
 
   while (1) {
-    update_key_events(input_handler);
-    for (int i = 0; i < key_events->len; i++) {
-      KeyEvent e = &(key_events->events[i]);
-      printf("%s type: %d\r\n", e->name, e->type);
-    }
+    KeyEvent e = next_key_event(input_handler);
   }
 
   free_input_handler(input_handler); // onexit

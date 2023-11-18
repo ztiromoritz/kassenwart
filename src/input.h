@@ -44,16 +44,6 @@
 #define KEY_CTRL_Y 121
 #define KEY_CTRL_Z 122
 
-struct _key_events {
-  int len;
-  struct _key_event *events;
-};
-
-typedef struct _key_events *KeyEvents;
-
-typedef struct _input_handler *InputHandler;
-
-InputHandler init_input_handler();
 
 struct _key_event {
   uint8_t type; // KEY_* 
@@ -64,10 +54,12 @@ struct _key_event {
 
 typedef struct _key_event *KeyEvent;
 
-KeyEvents get_key_events(InputHandler handler);
+typedef struct _input_handler *InputHandler;
 
-void update_key_events(InputHandler h);
+InputHandler init_input_handler();
 
-void free_input_handler(InputHandler handler);
+KeyEvent next_key_event(InputHandler);
+
+void free_input_handler(InputHandler);
 
 #endif
