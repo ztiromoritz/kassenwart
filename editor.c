@@ -32,6 +32,18 @@ void enable_raw_mode() {
     die("tcsetattr");
 }
 
+// Low level input processing
+char editor_read_keys() {
+
+
+}
+
+// high level key press handling
+void editor_process_keypress() {
+
+
+}
+
 int main() {
 
   enable_raw_mode();

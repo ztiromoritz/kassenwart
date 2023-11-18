@@ -36,3 +36,6 @@ add_executable(editor editor.c)
 
 ## Experiment with reading and writing key strokes
 add_executable(readlog scratchpad/readlog.c)
+
+## Experimental read handler
+add_executable(input scratchpad/input.c)

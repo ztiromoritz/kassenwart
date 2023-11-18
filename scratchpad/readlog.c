@@ -103,14 +103,8 @@ static uint8_t const _UTF8_LENGTH[16] =
 #define IS_UTF8_START(b) (((b)&0xc0) == 0xc0)
 #define IS_UTF8_PART(b) ((b & (1 << 7)) && !(b & (1 << 6)))
 
-struct key_event {
-  unsigned char type;
-  unsigned char len;
-  char *name; // Pointer to a constant name. Must not be freed.
-  char *raw;  // The raw data of length len. Must be freed.
-};
 
-#define BUFFER_SIZE 4 //
+#define BUFFER_SIZE 32 //
 #define TRAILING_SIZE 8 // There is a bit of wiggle room for UTF-8
 int main() {
 
