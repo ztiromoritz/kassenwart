@@ -2,36 +2,78 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
-
-#include <sys/ioctl.h>>
 
 #include "src/input.h"
 #include "src/raw.h"
 #include "src/utils.h"
-
+/*** editor state ***/
 struct editor_config {
+  int cx;
+  int cy;
   int screen_rows;
   int screen_cols;
 };
 
 struct editor_config E;
 
-// high level key press handling
+/*** high level key press handling ***/
 void editor_process_keypress(KeyEvent e) {
-  if (e->type == KEY_CTRL('q')) {
+  switch (e->type) {
+  case KEY_CTRL('q'):
+    // clear screen
     write(STDOUT_FILENO, "\x1b[2J", 4);
     write(STDOUT_FILENO, "\x1b[H", 3);
     exit(0);
+  case KEY_ARROW_UP:
+    E.cy--;
+    break;
+  case KEY_ARROW_DOWN:
+    E.cy++;
+    break;
+  case KEY_ARROW_LEFT:
+    E.cx--;
+    break;
+  case KEY_ARROW_RIGHT:
+    E.cx++;
+    break;
   }
-  printf("Key event %s\r\n", e->name);
+}
+
+/*** screen ***/
+int get_cursor_position(int *rows, int *cols) {
+  char buf[32];
+  unsigned int i = 0;
+
+  if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) {
+    return -1;
+  }
+
+  while (i < sizeof(buf) - 1) {
+    while (read(STDIN_FILENO, &buf[i], 1) != 1)
+      break;
+    if (buf[i] == 'R')
+      break;
+    i++;
+  }
+  buf[i] = '\0';
+  if (buf[0] != '\x1b' || buf[1] != '[')
+    return -1;
+  if (sscanf(&buf[2], "%d;%d", rows, cols) != 2)
+    return -1;
+
+  return 0;
 }
 
 int get_window_size(int *rows, int *cols) {
   struct winsize ws;
   if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
-    return -1;
+    if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12)
+      return -1;
+    return get_cursor_position(rows, cols);
   } else {
     *cols = ws.ws_col;
     *rows = ws.ws_row;
@@ -39,21 +81,66 @@ int get_window_size(int *rows, int *cols) {
   }
 }
 
-void editor_draw_rows() {
+/*** append buffer ***/
+struct abuf {
+  char *b;
+  int len;
+};
+#define ABUF_INIT                                                              \
+  { NULL, 0 }
+void abuf_append(struct abuf *ab, const char *s, int len) {
+  int new_len = ab->len + len;
+  char *new = realloc(ab->b, new_len);
+  if (new == NULL)
+    return;
+  memcpy(&new[ab->len], s, len);
+  ab->b = new;
+  ab->len = new_len;
+}
+
+void abuf_free(struct abuf *ab) { free(ab->b); }
+
+/*** update screen ***/
+void editor_draw_rows(struct abuf *ab) {
   for (int y = 0; y < E.screen_rows; y++) {
-    write(STDIN_FILENO, "~\r\n", 3);
+    abuf_append(ab, "~", 1);
+    // clear line
+    abuf_append(ab, "\x1b[K", 4);
+    if (y < E.screen_rows - 1) {
+      abuf_append(ab, "\r\n", 2);
+    }
   }
 }
 
-void editor_refresh_screen() {
-  write(STDOUT_FILENO, "\x1b[2J", 4);
-  write(STDOUT_FILENO, "\x1b[H", 3);
+void position_cursor(struct abuf *ab) {
+  char buf[32];
+  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
+  abuf_append(ab, buf, strlen(buf));
+}
 
-  editor_draw_rows();
-  write(STDOUT_FILENO, "\x1b[H", 3);
+void editor_refresh_screen() {
+  struct abuf ab = ABUF_INIT;
+  // hide cursor
+  abuf_append(&ab, "\x1b[?25l", 6);
+
+
+  editor_draw_rows(&ab);
+
+  position_cursor(&ab);
+
+  // show cursor again
+  abuf_append(&ab, "\x1b[?25h", 6);
+
+  write(STDOUT_FILENO, ab.b, ab.len);
+
+  abuf_free(&ab);
 }
 
 void init_editor() {
+  // init cursor position
+  E.cx = 0;
+  E.cy = 0;
+
   if (get_window_size(&E.screen_rows, &E.screen_cols) == -1)
     die("get_window_size");
 }
