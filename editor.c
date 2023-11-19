@@ -5,9 +5,18 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <sys/ioctl.h>>
+
 #include "src/input.h"
 #include "src/raw.h"
 #include "src/utils.h"
+
+struct editor_config {
+  int screen_rows;
+  int screen_cols;
+};
+
+struct editor_config E;
 
 // high level key press handling
 void editor_process_keypress(KeyEvent e) {
@@ -19,8 +28,19 @@ void editor_process_keypress(KeyEvent e) {
   printf("Key event %s\r\n", e->name);
 }
 
-void edior_draw_rows() {
-  for (int y = 0; y < 24; y++) {
+int get_window_size(int *rows, int *cols) {
+  struct winsize ws;
+  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+    return -1;
+  } else {
+    *cols = ws.ws_col;
+    *rows = ws.ws_row;
+    return 0;
+  }
+}
+
+void editor_draw_rows() {
+  for (int y = 0; y < E.screen_rows; y++) {
     write(STDIN_FILENO, "~\r\n", 3);
   }
 }
@@ -29,13 +49,19 @@ void editor_refresh_screen() {
   write(STDOUT_FILENO, "\x1b[2J", 4);
   write(STDOUT_FILENO, "\x1b[H", 3);
 
-  edior_draw_rows();
+  editor_draw_rows();
   write(STDOUT_FILENO, "\x1b[H", 3);
+}
+
+void init_editor() {
+  if (get_window_size(&E.screen_rows, &E.screen_cols) == -1)
+    die("get_window_size");
 }
 
 int main() {
 
   enable_raw_mode();
+  init_editor();
 
   InputHandler input_handler = init_input_handler();
   do {
