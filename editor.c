@@ -10,6 +10,10 @@
 #include "src/input.h"
 #include "src/raw.h"
 #include "src/utils.h"
+
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
 /*** editor state ***/
 struct editor_config {
   int cx;
@@ -29,16 +33,16 @@ void editor_process_keypress(KeyEvent e) {
     write(STDOUT_FILENO, "\x1b[H", 3);
     exit(0);
   case KEY_ARROW_UP:
-    E.cy--;
+    E.cy = MAX(E.cy - 1, 0);
     break;
   case KEY_ARROW_DOWN:
-    E.cy++;
+    E.cy = MIN(E.cy + 1, E.screen_rows - 1);
     break;
   case KEY_ARROW_LEFT:
-    E.cx--;
+    E.cx = MAX(E.cx - 1, 0);
     break;
   case KEY_ARROW_RIGHT:
-    E.cx++;
+    E.cx = MIN(E.cx + 1, E.screen_cols - 1);
     break;
   }
 }
@@ -123,6 +127,7 @@ void editor_refresh_screen() {
   // hide cursor
   abuf_append(&ab, "\x1b[?25l", 6);
 
+  abuf_append(&ab, "\x1b[H", 3);
 
   editor_draw_rows(&ab);
 
