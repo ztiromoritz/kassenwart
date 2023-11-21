@@ -58,12 +58,12 @@ struct _input_handler {
   // struct _key_events events;
 };
 
-void _write_key_event( //
+int _write_event( //
     InputHandler handler,
     unsigned char type, //
     char *name,         //
     uint8_t len,        //
-    unsigned char *data) {
+    unsigned char *data, int work_offset) {
   int i = handler->event_buffer_len;
   KeyEvent event = &(handler->events[i]);
   handler->event_buffer_len++;
@@ -73,7 +73,7 @@ void _write_key_event( //
   event->len = len;
   event->raw = malloc(sizeof(unsigned char) * len);
   memcpy(event->raw, data, len);
-
+  return work_offset + len;
 }
 
 void _free_key_events(InputHandler handler) {
@@ -172,65 +172,81 @@ void _update_key_events(InputHandler h) {
     // parse ESC Sequenze
     //
     if (IS_ESC(first)) {
-      printf("ESC branch \r\n");
-      if (i + 1 == h->work_len || i + 2 == h->work_len) {
-        // Simple ESC near end of buffer
-        // We assume non trailing in escape sequences
-        _write_key_event(h, 0, "ESC", 1, &work[i]);
-        i++;
-        continue;
-      } else if (i + 2 < h->work_len) {
+      int esc_len = h->work_len - i;
+      if (esc_len > 2) {
         unsigned char second = work[i + 1];
         unsigned char third = work[i + 2];
         // May be an ESC sequence
         if (second == '[') {
           switch (third) {
           case 'A':
-            _write_key_event(h, KEY_ARROW_UP, "Arrow Up", 3, &work[i]);
-            i += 3;
+            i = _write_event(h, KEY_ARROW_UP, "Arrow Up", 3, &work[i], i);
             continue;
           case 'B':
-            _write_key_event(h, KEY_ARROW_DOWN, "Arrow Down", 3, &work[i]);
-            i += 3;
+            i = _write_event(h, KEY_ARROW_DOWN, "Arrow Down", 3, &work[i], i);
             continue;
           case 'C':
-            _write_key_event(h, KEY_ARROW_RIGHT, "Arrow Right", 3, &work[i]);
-            i += 3;
+            i = _write_event(h, KEY_ARROW_RIGHT, "Arrow Right", 3, &work[i], i);
             continue;
           case 'D':
-            _write_key_event(h, KEY_ARROW_LEFT, "Arrow Left", 3, &work[i]);
-            i += 3;
+            i = _write_event(h, KEY_ARROW_LEFT, "Arrow Left", 3, &work[i], i);
             continue;
           }
+          if (third >= '0' && third <= '9' && esc_len >= 4) {
+            unsigned char fourth = work[i + 3];
+            if (fourth == '~') {
+              switch (third) {
+              case '1':
+              case '7':
+                i = _write_event(h, KEY_HOME, "Home", 4, &work[i], i);
+                continue;
+              case '4':
+              case '8':
+                i = _write_event(h, KEY_END, "End", 4, &work[i], i);
+                continue;
+              case '5':
+                i = _write_event(h, KEY_PAGE_UP, "PgUp", 4, &work[i], i);
+                continue;
+              case '6':
+                i = _write_event(h, KEY_PAGE_DOWN, "PgDown", 4, &work[i], i);
+                continue;
+	      case '3':
+                i = _write_event(h, KEY_DELETE, "Delete", 4, &work[i], i);
+		continue;
+              }
+            }
+          }
         } else if (work[i + 1] == 'O') {
+          i = _write_event(h, KEY_TODO, "<esc>O sequence", 2, &work[i], i);
+          continue;
         }
       }
+      // No known ESC Sequence or single ESC
+      i = _write_event(h, KEY_ESC, "ESC", 1, &work[i], i);
+      continue;
     }
 
     // parse UTF-8
     if (IS_ASCII(first)) {
       if (IS_ASCII_LETTER(first)) {
-        _write_key_event(h, KEY_CHAR, "Letter", 1, &work[i]);
+        i = _write_event(h, KEY_CHAR, "Letter", 1, &work[i], i);
       } else if (IS_RET(first)) {
-        _write_key_event(h, KEY_RETURN, "Return", 1, &work[i]);
+        i = _write_event(h, KEY_RETURN, "Return", 1, &work[i], i);
       } else if (IS_DEL(first)) {
-        _write_key_event(h, KEY_BACKSPACE, "Backspace", 1, &work[i]);
+        i = _write_event(h, KEY_BACKSPACE, "Backspace", 1, &work[i], i);
       } else if (IS_TAB(first)) {
-        _write_key_event(h, KEY_TAB, "Tab", 1, &work[i]);
+        i = _write_event(h, KEY_TAB, "Tab", 1, &work[i], i);
       } else if (IS_CTRL_KEY(first)) {
-        _write_key_event(h, KEY_CTRL_FROM_RAW(first), "CTRL+<>", 1, &work[i]);
+        i = _write_event(h, KEY_CTRL_FROM_RAW(first), "CTRL+<>", 1, &work[i],
+                         i);
       } else {
-        _write_key_event(h, KEY_TODO, "ASCII FS,GS,RS,US", 1, &work[i]);
+        i = _write_event(h, KEY_TODO, "ASCII FS,GS,RS,US", 1, &work[i], i);
       }
-      i++;
-      continue;
     }
 
     if (IS_UTF8_START(first)) {
       int utf8_len = UTF8_LENGTH(first);
-      _write_key_event(h, KEY_CHAR, "Letter", utf8_len, &work[i]);
-      i += utf8_len;
-      continue;
+      i = _write_event(h, KEY_CHAR, "Letter", utf8_len, &work[i], i);
     }
   }
 }

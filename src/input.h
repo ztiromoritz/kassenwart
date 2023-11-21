@@ -14,6 +14,11 @@
 #define KEY_ARROW_DOWN 11
 #define KEY_ARROW_LEFT 12
 #define KEY_ARROW_RIGHT 13
+#define KEY_HOME 14
+#define KEY_END 15
+#define KEY_PAGE_DOWN 16
+#define KEY_PAGE_UP 17
+#define KEY_DELETE 18
 
 #define KEY_CTRL(c) ((unsigned int)c)
 #define KEY_CTRL_FROM_RAW(n) (n + 96) 

@@ -33,6 +33,7 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 ## debugging and learning
 ## kilo / https://viewsourcecode.org/snaptoken/kilo
 add_executable(editor src/input.c src/utils.c src/raw.c editor.c)
+add_executable(input-test src/input.c src/utils.c src/raw.c input-test.c)
 
 ## Experiment with reading and writing key strokes
 add_executable(readlog scratchpad/readlog.c)
