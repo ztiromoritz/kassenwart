@@ -1,3 +1,5 @@
+#include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -29,7 +31,7 @@ void free_trie(Trie trie) {
   free(trie);
 }
 
-void trie_add_entry(Trie trie, char *key, void *value) {
+int trie_add_entry(Trie trie, char *key, void *value) {
   char c = key[0];
   Trie child = NULL;
   for (int i = 0; i < trie->next_child; i++) {
@@ -39,7 +41,10 @@ void trie_add_entry(Trie trie, char *key, void *value) {
   }
   if (child == NULL) {
     // error handling how
-    realloc(trie->children, sizeof(Trie) * (trie->next_child + 1));
+    void *result =
+        realloc(trie->children, sizeof(Trie) * (trie->next_child + 1));
+    if (result == NULL)
+      return errno;
     child = trie_init();
     child->c = c;
     trie->children[trie->next_child] = child;
@@ -50,23 +55,58 @@ void trie_add_entry(Trie trie, char *key, void *value) {
   } else {
     trie_add_entry(child, &(key[1]), value);
   }
+  return 0;
 }
 
-void *trie_query(Trie trie, char *key) {
-  char c = key[0];
-  if (c == '\0') {
-    return trie->value;
+int _trie_query(Trie trie, char *search_string, int *out_match_length,
+                void **result, bool stop_on_prefix_match) {
+
+  char c = search_string[0];
+
+  // Check for match on the current level
+  if (
+      // Found a match even of prefix
+      (stop_on_prefix_match && trie->value != NULL)
+      // End of search string is reached
+      || c == '\0'
+      //
+  ) {
+    (*result) = trie->value;
+    if ((*result) == NULL) {
+      (*out_match_length) = -1;
+      return false;
+    }
+    return true;
   }
 
+  // Try to go on step down
   Trie child = NULL;
   for (int i = 0; i < trie->next_child; i++) {
     if (trie->children[i]->c == c) {
       child = trie->children[i];
     }
   }
+  if (child == NULL) {
+    (*result) = NULL;
+    (*out_match_length) = -1;
+    return false;
+  }
 
-  if (child == NULL)
-    return NULL;
+  // Go one step down
+  (*out_match_length)++;
+  return _trie_query(child, &search_string[1], out_match_length, result,
+                    stop_on_prefix_match);
+}
 
-  return trie_query(child, &key[1]);
+int trie_query_prefix(Trie trie, char *search_string, int *out_match_length,
+                       void **result) {
+  (*out_match_length) = 0;
+  (*result) = NULL;
+  return _trie_query(trie, search_string, out_match_length, result, true);
+}
+
+int trie_query(Trie trie, char *search_string, int*out_match_length, void **result) {
+  (*out_match_length) = 0;
+  (*result) = NULL;
+  return _trie_query(trie, search_string, out_match_length, result, false);
 }
