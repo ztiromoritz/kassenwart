@@ -53,7 +53,7 @@ int main() {
   trie_add_entry(trie, "XA", "test1");
   trie_add_entry(trie, "XB", "test2");
   trie_add_entry(trie, "XC", "test3");
-  // trie_add_entry(trie, "XD", "test4");
+  trie_add_entry(trie, "XD", "test4");
   // trie_add_entry(trie, "XE", "test4");
   //trie_add_entry(trie, "XF", "test4");
   //trie_add_entry(trie, "XG", "test4");
@@ -67,10 +67,10 @@ int main() {
   trie_add_entry(trie, "baum", "blatt");
 */
 
-  char *tests[7] = {"ha",   "hallo", "hello world", "handlanger",
+  char *tests[8] = {"XDB","ha",   "hallo", "hello world", "handlanger",
                     "baum", "bau",   "hand"};
 
-  for (int i = 0; i < 7; i++) {
+  for (int i = 0; i < 8; i++) {
     void *result;
     int match_length;
 
