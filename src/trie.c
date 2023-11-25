@@ -33,6 +33,7 @@ void free_trie(Trie trie) {
 
 int trie_add_entry(Trie trie, char *key, void *value) {
   char c = key[0];
+  printf("trie_add_entry %s %c\r\n", key, c);
   Trie child = NULL;
   for (int i = 0; i < trie->next_child; i++) {
     if (trie->children[i]->c == c) {

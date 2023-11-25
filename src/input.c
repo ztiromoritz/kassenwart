@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "./input.h"
+#include "./trie.h"
 #include "./utils.h"
 
 // Internal Match
@@ -51,6 +52,9 @@ struct _input_handler {
   unsigned char work[BUFFER_SIZE + TRAILING_SIZE];
   ssize_t work_len;
 
+  // Match for ESC sequences
+  Trie esc_trie;
+
   // key events buffer
   int current_event;
   int event_buffer_len;
@@ -83,6 +87,30 @@ void _free_key_events(InputHandler handler) {
   handler->event_buffer_len = 0;
 }
 
+struct _trie_entry {
+  char *pattern;
+  int type;
+  char *name;
+};
+
+typedef struct _trie_entry _trie_entry;
+
+static const _trie_entry esc_entries[] = {
+    {"[A", KEY_ARROW_UP, "Arrow Up new"},
+    {"[B", KEY_ARROW_DOWN, "Arrow Down new"},
+    {"[C", KEY_ARROW_RIGHT, "Arrow Right new"},
+    {"[D", KEY_ARROW_LEFT, "Arrow Left new"}};
+
+void fill_esc_trie(Trie trie) {
+  // static struct _trie_value x = {"sdf", , "Hello"};
+  int array_len = sizeof(esc_entries) / sizeof(_trie_entry);
+  for (int i = 0; i < array_len; i++) {
+    const _trie_entry *esc_entry = &esc_entries[i];
+    //printf("pattern %s \r\n", esc_entry->pattern);
+    trie_add_entry(trie, esc_entry->pattern, (void *)esc_entry);
+  }
+}
+
 InputHandler init_input_handler() {
   struct _input_handler *handler;
   handler = malloc(sizeof(*handler));
@@ -93,6 +121,9 @@ InputHandler init_input_handler() {
   handler->current_event = 0;
   handler->event_buffer_len = 0;
   handler->events = malloc(sizeof(struct _key_event) * BUFFER_SIZE); //
+
+  handler->esc_trie = trie_init();
+  fill_esc_trie(handler->esc_trie);
 
   return handler;
 }
@@ -110,6 +141,7 @@ KeyEvent next_key_event(InputHandler handler) {
 void free_input_handler(InputHandler handler) {
   _free_key_events(handler);
   free(handler->events);
+  free(handler->esc_trie);
   free(handler);
 }
 
@@ -173,6 +205,20 @@ void _update_key_events(InputHandler h) {
     //
     if (IS_ESC(first)) {
       int esc_len = h->work_len - i;
+
+      // use the trie
+      if (esc_len > 1) {
+
+        void *result;
+        int match_len; 
+	if(trie_query_prefix(h->esc_trie, &work[i+1], &match_len, &result)){
+	   _trie_entry* entry = (_trie_entry *)(result);
+	   i = _write_event(h, entry->type, entry->name, match_len, &work[i], i); 
+	   continue;
+	}
+      }
+
+      // legacy methode
       if (esc_len > 2) {
         unsigned char second = work[i + 1];
         unsigned char third = work[i + 2];
@@ -210,9 +256,9 @@ void _update_key_events(InputHandler h) {
               case '6':
                 i = _write_event(h, KEY_PAGE_DOWN, "PgDown", 4, &work[i], i);
                 continue;
-	      case '3':
+              case '3':
                 i = _write_event(h, KEY_DELETE, "Delete", 4, &work[i], i);
-		continue;
+                continue;
               }
             }
           }
