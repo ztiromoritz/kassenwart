@@ -104,11 +104,19 @@ static const _trie_entry esc_entries[] = {
 void fill_esc_trie(Trie trie) {
   // static struct _trie_value x = {"sdf", , "Hello"};
   int array_len = sizeof(esc_entries) / sizeof(_trie_entry);
-  for (int i = 0; i < array_len; i++) {
+  /*for (int i = 0; i < array_len; i++) {
     const _trie_entry *esc_entry = &esc_entries[i];
     //printf("pattern %s \r\n", esc_entry->pattern);
     trie_add_entry(trie, esc_entry->pattern, (void *)esc_entry);
   }
+
+*/
+  trie_add_entry(trie, "[A", "test1");
+  trie_add_entry(trie, "[B", "test2");
+  trie_add_entry(trie, "[C", "test3");
+  trie_add_entry(trie, "[D", "test4");
+
+
 }
 
 InputHandler init_input_handler() {
