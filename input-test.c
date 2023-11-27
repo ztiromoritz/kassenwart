@@ -9,6 +9,7 @@ int main() {
   char buffer[10];
   enable_raw_mode();
   InputHandler input_handler = init_input_handler();
+  printf("\r\n");
   while (1) {
     KeyEvent e = next_key_event(input_handler);
     memcpy(&buffer, e->raw, e->len);

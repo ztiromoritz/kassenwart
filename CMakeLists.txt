@@ -30,6 +30,12 @@ target_link_libraries(kassenwart
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
+
+# AddressSanitizer 
+add_compile_options( "-fsanitize=address" )
+add_link_options( "-fsanitize=address" )
+
+
 ## debugging and learning
 ## kilo / https://viewsourcecode.org/snaptoken/kilo
 add_executable(editor src/trie.c src/input.c src/utils.c src/raw.c editor.c)

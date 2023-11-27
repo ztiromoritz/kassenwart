@@ -96,27 +96,100 @@ struct _trie_entry {
 typedef struct _trie_entry _trie_entry;
 
 static const _trie_entry esc_entries[] = {
-    {"[A", KEY_ARROW_UP, "Arrow Up new"},
-    {"[B", KEY_ARROW_DOWN, "Arrow Down new"},
-    {"[C", KEY_ARROW_RIGHT, "Arrow Right new"},
-    {"[D", KEY_ARROW_LEFT, "Arrow Left new"}};
+    {"[A", KEY_ARROW_UP, "Arrow Up"},
+    {"[B", KEY_ARROW_DOWN, "Arrow Down"},
+    {"[C", KEY_ARROW_RIGHT, "Arrow Right"},
+    {"[D", KEY_ARROW_LEFT, "Arrow Left"},
+
+    {"[1;2A", KEY_ARROW_UP, "Arrow Up"},
+    {"[1;2B", KEY_ARROW_DOWN, "Arrow Down"},
+    {"[1;2C", KEY_ARROW_RIGHT, "Arrow Right"},
+    {"[1;2D", KEY_ARROW_LEFT, "Arrow Left"},
+
+    // I'm so close to implement my own regexp :D
+    // Alt+Arrow
+    {"[1;3A", KEY_ARROW_UP, "Arrow Up"},
+    {"[1;3B", KEY_ARROW_DOWN, "Arrow Down"},
+    {"[1;3C", KEY_ARROW_RIGHT, "Arrow Right"},
+    {"[1;3D", KEY_ARROW_LEFT, "Arrow Left"},
+
+    {"[1;4A", KEY_ARROW_UP, "Arrow Up"},
+    {"[1;4B", KEY_ARROW_DOWN, "Arrow Down"},
+    {"[1;4C", KEY_ARROW_RIGHT, "Arrow Right"},
+    {"[1;4D", KEY_ARROW_LEFT, "Arrow Left"},
+
+    {"[1;5A", KEY_ARROW_UP, "Arrow Up"},
+    {"[1;5B", KEY_ARROW_DOWN, "Arrow Down"},
+    {"[1;5C", KEY_ARROW_RIGHT, "Arrow Right"},
+    {"[1;5D", KEY_ARROW_LEFT, "Arrow Left"},
+
+    {"[1;6A", KEY_ARROW_UP, "Arrow Up"},
+    {"[1;6B", KEY_ARROW_DOWN, "Arrow Down"},
+    {"[1;6C", KEY_ARROW_RIGHT, "Arrow Right"},
+    {"[1;6D", KEY_ARROW_LEFT, "Arrow Left"},
+
+    {"[1;2F", KEY_END, "End"},   // +Ctrl
+    {"[1;3F", KEY_END, "End"},   // +Ctrl
+    {"[1;4F", KEY_END, "End"},   // +Ctrl
+    {"[1;5F", KEY_END, "End"},   // +Ctrl
+    {"[1;6F", KEY_END, "End"},   // +Ctrl
+                                 //
+    {"[1;2H", KEY_HOME, "Home"}, // +Ctrl
+    {"[1;3H", KEY_HOME, "Home"}, // +Ctrl
+    {"[1;4H", KEY_HOME, "Home"}, // +Ctrl
+    {"[1;5H", KEY_HOME, "Home"}, // +Ctrl
+    {"[1;6H", KEY_HOME, "Home"}, // +Ctrl
+
+    // Str+Alt+Arrow
+    {"[1;7A", KEY_ARROW_UP, "Arrow Up"},
+    {"[1;7B", KEY_ARROW_DOWN, "Arrow Down"},
+    {"[1;7C", KEY_ARROW_RIGHT, "Arrow Right"},
+    {"[1;7D", KEY_ARROW_LEFT, "Arrow Left"},
+
+    {"[1~", KEY_HOME, "Home"},
+
+    {"[2~", KEY_INSERT, "Insert"},
+    {"[2;2~", KEY_INSERT, "Insert"},
+    {"[2;3~", KEY_INSERT, "Insert"},
+    {"[2;4~", KEY_INSERT, "Insert"},
+    {"[2;5~", KEY_INSERT, "Insert"},
+    {"[2;6~", KEY_INSERT, "Insert"},
+
+    {"[3~", KEY_DELETE, "Delete"},
+    {"[3;2~", KEY_DELETE, "Delete"}, // + Ctrl
+    {"[3;3~", KEY_DELETE, "Delete"},
+    {"[3;4~", KEY_DELETE, "Delete"},
+    {"[3;5~", KEY_DELETE, "Delete"},
+    {"[3;6~", KEY_DELETE, "Delete"},
+
+    {"[4~", KEY_END, "End"},
+    {"[5~", KEY_PAGE_UP, "PgUp"},
+    {"[6~", KEY_PAGE_DOWN, "PgDown"},
+    {"[7~", KEY_HOME, "Home"}, // home again
+    {"[8~", KEY_END, "End"},   // End again
+                               // [9~ ??
+    {"[Z", KEY_SHIFT_TAB, "Shift Tab"},
+
+    {"OP", KEY_F1, "F1"},
+    {"OQ", KEY_F2, "F2"},
+    {"OR", KEY_F3, "F3"},
+    {"OS", KEY_F4, "F4"},
+
+    {"[15~", KEY_F5, "F5"},
+    {"[17~", KEY_F6, "F6"},
+    {"[18~", KEY_F7, "F7"},
+    {"[19~", KEY_F8, "F8"},
+    {"[20~", KEY_F9, "F9"},
+    {"[21~", KEY_F10, "F10"},
+    {"[24~", KEY_F12, "F12"},
+};
 
 void fill_esc_trie(Trie trie) {
-  // static struct _trie_value x = {"sdf", , "Hello"};
   int array_len = sizeof(esc_entries) / sizeof(_trie_entry);
-  /*for (int i = 0; i < array_len; i++) {
+  for (int i = 0; i < array_len; i++) {
     const _trie_entry *esc_entry = &esc_entries[i];
-    //printf("pattern %s \r\n", esc_entry->pattern);
     trie_add_entry(trie, esc_entry->pattern, (void *)esc_entry);
   }
-
-*/
-  trie_add_entry(trie, "[A", "test1");
-  trie_add_entry(trie, "[B", "test2");
-  trie_add_entry(trie, "[C", "test3");
-  trie_add_entry(trie, "[D", "test4");
-
-
 }
 
 InputHandler init_input_handler() {
@@ -207,71 +280,15 @@ void _update_key_events(InputHandler h) {
   int i = 0;
   while (i < h->work_len) {
     unsigned char first = work[i];
+    int suffix_len = h->work_len - i;
 
-    //
-    // parse ESC Sequenze
-    //
     if (IS_ESC(first)) {
-      int esc_len = h->work_len - i;
-
-      // use the trie
-      if (esc_len > 1) {
-
+      if (suffix_len > 1) {
         void *result;
-        int match_len; 
-	if(trie_query_prefix(h->esc_trie, &work[i+1], &match_len, &result)){
-	   _trie_entry* entry = (_trie_entry *)(result);
-	   i = _write_event(h, entry->type, entry->name, match_len, &work[i], i); 
-	   continue;
-	}
-      }
-
-      // legacy methode
-      if (esc_len > 2) {
-        unsigned char second = work[i + 1];
-        unsigned char third = work[i + 2];
-        // May be an ESC sequence
-        if (second == '[') {
-          switch (third) {
-          case 'A':
-            i = _write_event(h, KEY_ARROW_UP, "Arrow Up", 3, &work[i], i);
-            continue;
-          case 'B':
-            i = _write_event(h, KEY_ARROW_DOWN, "Arrow Down", 3, &work[i], i);
-            continue;
-          case 'C':
-            i = _write_event(h, KEY_ARROW_RIGHT, "Arrow Right", 3, &work[i], i);
-            continue;
-          case 'D':
-            i = _write_event(h, KEY_ARROW_LEFT, "Arrow Left", 3, &work[i], i);
-            continue;
-          }
-          if (third >= '0' && third <= '9' && esc_len >= 4) {
-            unsigned char fourth = work[i + 3];
-            if (fourth == '~') {
-              switch (third) {
-              case '1':
-              case '7':
-                i = _write_event(h, KEY_HOME, "Home", 4, &work[i], i);
-                continue;
-              case '4':
-              case '8':
-                i = _write_event(h, KEY_END, "End", 4, &work[i], i);
-                continue;
-              case '5':
-                i = _write_event(h, KEY_PAGE_UP, "PgUp", 4, &work[i], i);
-                continue;
-              case '6':
-                i = _write_event(h, KEY_PAGE_DOWN, "PgDown", 4, &work[i], i);
-                continue;
-              case '3':
-                i = _write_event(h, KEY_DELETE, "Delete", 4, &work[i], i);
-                continue;
-              }
-            }
-          }
-        } else if (work[i + 1] == 'O') {
-          i = _write_event(h, KEY_TODO, "<esc>O sequence", 2, &work[i], i);
+        int match_len;
+        if (trie_query_prefix(h->esc_trie, &work[i + 1], &match_len, &result)) {
+          _trie_entry *e = (_trie_entry *)(result);
+          i = _write_event(h, e->type, e->name, match_len + 1, &work[i], i);
           continue;
         }
       }
@@ -280,7 +297,6 @@ void _update_key_events(InputHandler h) {
       continue;
     }
 
-    // parse UTF-8
     if (IS_ASCII(first)) {
       if (IS_ASCII_LETTER(first)) {
         i = _write_event(h, KEY_CHAR, "Letter", 1, &work[i], i);

@@ -9,6 +9,7 @@
 #define KEY_RETURN 3
 #define KEY_TAB 4
 #define KEY_BACKSPACE 5
+#define KEY_SHIFT_TAB 6
 
 #define KEY_ARROW_UP 10
 #define KEY_ARROW_DOWN 11
@@ -19,6 +20,20 @@
 #define KEY_PAGE_DOWN 16
 #define KEY_PAGE_UP 17
 #define KEY_DELETE 18
+#define KEY_INSERT 19
+
+#define KEY_F1 21
+#define KEY_F2 22
+#define KEY_F3 23
+#define KEY_F4 24
+#define KEY_F5 25
+#define KEY_F6 26
+#define KEY_F7 27
+#define KEY_F8 28
+#define KEY_F9 29
+#define KEY_F10 30
+#define KEY_F11 31
+#define KEY_F12 32
 
 #define KEY_CTRL(c) ((unsigned int)c)
 #define KEY_CTRL_FROM_RAW(n) (n + 96) 

@@ -33,7 +33,6 @@ void free_trie(Trie trie) {
 
 int trie_add_entry(Trie trie, char *key, void *value) {
   char c = key[0];
-  printf("trie_add_entry %s %c\r\n", key, c);
   Trie child = NULL;
   for (int i = 0; i < trie->next_child; i++) {
     if (trie->children[i]->c == c) {
@@ -41,10 +40,8 @@ int trie_add_entry(Trie trie, char *key, void *value) {
     }
   }
   if (child == NULL) {
-    // error handling how
-    void *result =
-        realloc(trie->children, sizeof(Trie) * (trie->next_child + 1));
-    if (result == NULL)
+    trie->children = realloc(trie->children, sizeof(Trie) * (trie->next_child + 1));
+    if (trie->children == NULL)
       return errno;
     child = trie_init();
     child->c = c;
