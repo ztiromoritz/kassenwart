@@ -17,3 +17,5 @@ Next steps
  * https://github.com/arthurbacci/Teditor
  * https://dev.to/rdentato/utf-8-strings-in-c-2-3-3kp1
  * https://www.charset.org/utf-8
+ * https://stackoverflow.com/questions/47201087/gcc-how-to-use-address-sanitizer
+ * https://valgrind.org/
