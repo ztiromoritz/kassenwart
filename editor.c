@@ -25,6 +25,7 @@ typedef struct erow {
   // wcwidth()
   // https://stackoverflow.com/questions/3634627/how-to-know-the-preferred-display-width-in-columns-of-unicode-characters
   // TODO: int display_width; //rendered size respecting unicode chars
+  // T H I S   I S   T H E   N E X T   S T E P ! ! !
 
 } erow;
 
@@ -126,7 +127,7 @@ void editor_draw_rows(struct abuf *ab) {
     if (y >= E.num_rows) {
       abuf_append(ab, "~", 1);
     } else {
-      // TODO E.row.display_cols
+      // TODO E.row.display_cols 
       int len = MIN(E.row[y].size, E.screen_cols);
       abuf_append(ab, E.row[y].chars, len);
     }
