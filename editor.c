@@ -1,3 +1,7 @@
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -14,12 +18,24 @@
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
+/*** data ***/
+typedef struct erow {
+  int size;
+  char *chars;
+  // wcwidth()
+  // https://stackoverflow.com/questions/3634627/how-to-know-the-preferred-display-width-in-columns-of-unicode-characters
+  // TODO: int display_width; //rendered size respecting unicode chars
+
+} erow;
+
 /*** editor state ***/
 struct editor_config {
   int cx;
   int cy;
   int screen_rows;
   int screen_cols;
+  int num_rows;
+  erow *row;
 };
 
 struct editor_config E;
@@ -107,7 +123,13 @@ void abuf_free(struct abuf *ab) { free(ab->b); }
 /*** update screen ***/
 void editor_draw_rows(struct abuf *ab) {
   for (int y = 0; y < E.screen_rows; y++) {
-    abuf_append(ab, "~", 1);
+    if (y >= E.num_rows) {
+      abuf_append(ab, "~", 1);
+    } else {
+      // TODO E.row.display_cols
+      int len = MIN(E.row[y].size, E.screen_cols);
+      abuf_append(ab, E.row[y].chars, len);
+    }
     // clear line
     abuf_append(ab, "\x1b[K", 4);
     if (y < E.screen_rows - 1) {
@@ -141,19 +163,58 @@ void editor_refresh_screen() {
   abuf_free(&ab);
 }
 
+/*** file i/o ***/
+
+void editor_append_row(char *s, size_t len) {
+  E.row = realloc(E.row, sizeof(erow) * (E.num_rows + 1));
+
+  int at = E.num_rows;
+  E.row[at].size = len;
+  E.row[at].chars = malloc(len + 1);
+  E.row[at].chars[len] = '\0';
+  memcpy(E.row[at].chars, s, len);
+  E.num_rows++;
+}
+
+void editor_open(char *filename) {
+  FILE *fp = fopen(filename, "r");
+  if (!fp) {
+    die("fopen");
+  }
+  char *line = NULL;
+  size_t line_cap = 0;
+  ssize_t line_len;
+  while ((line_len = getline(&line, &line_cap, fp)) != -1) {
+    while (line_len > 0 &&
+           (line[line_len - 1] == '\n' || line[line_len - 1] == '\r')) {
+      line_len--;
+    }
+    editor_append_row(line, line_len);
+  }
+  free(line);
+  fclose(fp);
+}
+
+/*** init ***/
+
 void init_editor() {
   // init cursor position
   E.cx = 0;
   E.cy = 0;
+  E.num_rows = 0;
+  E.row = NULL;
 
   if (get_window_size(&E.screen_rows, &E.screen_cols) == -1)
     die("get_window_size");
 }
 
-int main() {
+int main(int argc, char *argv[]) {
 
   enable_raw_mode();
   init_editor();
+  if (argc >= 2) {
+    editor_open(argv[1]);
+  }
 
   InputHandler input_handler = init_input_handler();
   do {

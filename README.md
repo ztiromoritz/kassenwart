@@ -19,3 +19,4 @@ Next steps
  * https://www.charset.org/utf-8
  * https://stackoverflow.com/questions/47201087/gcc-how-to-use-address-sanitizer
  * https://valgrind.org/
+ * https://sw.kovidgoyal.net/kitty/keyboard-protocol/
