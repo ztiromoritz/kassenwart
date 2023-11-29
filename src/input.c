@@ -21,8 +21,6 @@
 #define IS_RET(b) (b == 13)
 #define IS_TAB(b) (b == 9)
 
-#define IS_UTF8_START(b) (((b)&0xc0) == 0xc0)
-#define IS_UTF8_PART(b) ((b & (1 << 7)) && !(b & (1 << 6)))
 
 #define BUFFER_SIZE 32  //
 #define TRAILING_SIZE 8 // There is a bit of wiggle room for UTF-8
