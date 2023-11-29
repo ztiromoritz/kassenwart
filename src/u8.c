@@ -87,7 +87,8 @@ uint8_t u8_length(unsigned char c) { return _UTF8_LENGTH[c >> 4]; }
 
 // Parses the next utf8 character from the given buffer
 // and gives the length in bytes and the display_width in monospace
-void u8_next(unsigned char *c, uint8_t *out_length, uint8_t *out_display_width) {
+void u8_next(unsigned char *c, uint8_t *out_length,
+             uint8_t *out_display_width) {
   uint32_t codepoint;
   uint8_t len;
 
@@ -101,13 +102,14 @@ void u8_next(unsigned char *c, uint8_t *out_length, uint8_t *out_display_width) 
     (*out_display_width) = 1;
     return; // ASCII Shortcut
   case 2:
-    codepoint = (c[0] << 6) | (c[1] & 0x3F);
+    codepoint = ((c[0] & 0x1F) << 6) | (c[1] & 0x3F);
     break;
   case 3:
-    codepoint = (c[0] << 12) | ((c[1] & 0x3F) << 6) | (c[2] << 6);
+    codepoint = ((c[0] & 0xF) << 12) | ((c[1] & 0x3F) << 6) | (c[2] & 0x3F);
     break;
   case 4:
-    codepoint = (c[0] << 12) | ((c[1] & 0x3F) << 6) | (c[2] << 6);
+    codepoint = ((c[0] & 0x7) << 18) | ((c[1] & 0x3F) << 12) | ((c[2] & 0x3F) << 6) |
+                (c[3] & 0x3F);
     break;
   }
 
