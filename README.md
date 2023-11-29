@@ -22,3 +22,4 @@ Next steps
  * https://sw.kovidgoyal.net/kitty/keyboard-protocol/
  * https://github.com/unicode-rs/unicode-width
  * https://github.com/unicode-rs/unicode-width/issues/4 
+ * https://github.com/neovim/neovim/blob/master/src/unicode/emoji-data.txt
