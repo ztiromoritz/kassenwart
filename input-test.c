@@ -15,9 +15,11 @@ int main() {
     memcpy(&buffer, e->raw, e->len);
     buffer[e->len] = '\0';
     if (e->type == KEY_CHAR)
-      printf("%s (type: %d) \t\t'%s'\r\n", e->name, e->type, buffer);
+      printf("%s (type: %d) (display_width: %d)\t\t'%s'\r\n", e->name, e->type,
+             e->display_width, buffer);
     else
-      printf("%s (type: %d) \t\t '%08b'\r\n", e->name, e->type, buffer);
+      printf("%s (type: %d) (display_width: %d) \t\t '%08b'\r\n", e->name,
+             e->type, e->display_width, buffer);
     if (e->type == KEY_CTRL('c'))
       return 0;
   }

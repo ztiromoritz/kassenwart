@@ -123,10 +123,12 @@ void abuf_append(struct abuf *ab, const char *s, int len, int offset) {
 }
 
 void abuf_free(struct abuf *ab) { free(ab->b); }
+/*
+TODO:
 
 void next_char(char *text, int *i, int) {
   char c = text[*i];
-  u8_length(c)
+  //u8_length(c)
 }
 
 void append_row(int row, int offset_cols) {
@@ -136,9 +138,11 @@ void append_row(int row, int offset_cols) {
   while (display_size < E.screen_cols + offset_cols) {
     char c = E.row[row][i];
     i = i + u8_length(c);
-    offset_cols = offset_cols u8_display_width(c);
+    //offset_cols = offset_cols u8_display_width(c);
   }
 }
+
+*/
 
 /*** update screen ***/
 void editor_draw_rows(struct abuf *ab) {

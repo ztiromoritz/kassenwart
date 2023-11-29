@@ -70,6 +70,7 @@ struct _key_event {
   char *name; 
   uint8_t len;
   char *raw; 
+  uint8_t display_width;
 };
 
 typedef struct _key_event *KeyEvent;

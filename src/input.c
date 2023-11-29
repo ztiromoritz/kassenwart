@@ -9,8 +9,8 @@
 
 #include "./input.h"
 #include "./trie.h"
-#include "./utils.h"
 #include "./u8.h"
+#include "./utils.h"
 
 // Internal Match
 #define IS_ASCII(b) (((b)&0x80) == 0)
@@ -20,7 +20,6 @@
 #define IS_DEL(b) (b == 127)
 #define IS_RET(b) (b == 13)
 #define IS_TAB(b) (b == 9)
-
 
 #define BUFFER_SIZE 32  //
 #define TRAILING_SIZE 8 // There is a bit of wiggle room for UTF-8
@@ -53,10 +52,12 @@ struct _input_handler {
 
 int _write_event( //
     InputHandler handler,
-    unsigned char type, //
-    char *name,         //
-    uint8_t len,        //
-    unsigned char *data, int work_offset) {
+    unsigned char type,    //
+    char *name,            //
+    uint8_t len,           //
+    uint8_t display_width, //
+    unsigned char *data,   //
+    int work_offset) {
   int i = handler->event_buffer_len;
   KeyEvent event = &(handler->events[i]);
   handler->event_buffer_len++;
@@ -64,6 +65,7 @@ int _write_event( //
   event->type = type;
   event->name = name;
   event->len = len;
+  event->display_width = display_width;
   event->raw = malloc(sizeof(unsigned char) * len);
   memcpy(event->raw, data, len);
   return work_offset + len;
@@ -277,35 +279,39 @@ void _update_key_events(InputHandler h) {
         int match_len;
         if (trie_query_prefix(h->esc_trie, &work[i + 1], &match_len, &result)) {
           _trie_entry *e = (_trie_entry *)(result);
-          i = _write_event(h, e->type, e->name, match_len + 1, &work[i], i);
+          i = _write_event(h, e->type, e->name, match_len + 1, 0, &work[i], i);
           continue;
         }
       }
       // No known ESC Sequence or single ESC
-      i = _write_event(h, KEY_ESC, "ESC", 1, &work[i], i);
+      i = _write_event(h, KEY_ESC, "ESC", 1, 0, &work[i], i);
       continue;
     }
 
     if (IS_ASCII(first)) {
       if (IS_ASCII_LETTER(first)) {
-        i = _write_event(h, KEY_CHAR, "Letter", 1, &work[i], i);
+        i = _write_event(h, KEY_CHAR, "Letter", 1, 1, &work[i], i);
       } else if (IS_RET(first)) {
-        i = _write_event(h, KEY_RETURN, "Return", 1, &work[i], i);
+        i = _write_event(h, KEY_RETURN, "Return", 1, 0, &work[i], i);
       } else if (IS_DEL(first)) {
-        i = _write_event(h, KEY_BACKSPACE, "Backspace", 1, &work[i], i);
+        i = _write_event(h, KEY_BACKSPACE, "Backspace", 1, 0, &work[i], i);
       } else if (IS_TAB(first)) {
-        i = _write_event(h, KEY_TAB, "Tab", 1, &work[i], i);
+        // TODO: display_width
+        i = _write_event(h, KEY_TAB, "Tab", 1, 0, &work[i], i);
       } else if (IS_CTRL_KEY(first)) {
-        i = _write_event(h, KEY_CTRL_FROM_RAW(first), "CTRL+<>", 1, &work[i],
+        i = _write_event(h, KEY_CTRL_FROM_RAW(first), "CTRL+<>", 1, 0, &work[i],
                          i);
       } else {
-        i = _write_event(h, KEY_TODO, "ASCII FS,GS,RS,US", 1, &work[i], i);
+        i = _write_event(h, KEY_TODO, "ASCII FS,GS,RS,US", 1, 0, &work[i], i);
       }
     }
 
     if (IS_UTF8_START(first)) {
-      int utf8_len = u8_length(first);
-      i = _write_event(h, KEY_CHAR, "Letter", utf8_len, &work[i], i);
+      uint8_t utf8_len;
+      uint8_t utf8_display_width; 
+      u8_next(&work[i], &utf8_len, &utf8_display_width);
+      i = _write_event(h, KEY_CHAR, "Letter", utf8_len, utf8_display_width,
+                       &work[i], i);
     }
   }
 }
