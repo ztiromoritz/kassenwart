@@ -13,6 +13,7 @@
 
 #include "src/input.h"
 #include "src/raw.h"
+#include "src/u8.h"
 #include "src/utils.h"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -109,32 +110,50 @@ struct abuf {
 };
 #define ABUF_INIT                                                              \
   { NULL, 0 }
-void abuf_append(struct abuf *ab, const char *s, int len) {
-  int new_len = ab->len + len;
+
+void abuf_append(struct abuf *ab, const char *s, int len, int offset) {
+  int new_len = ab->len + len - offset;
   char *new = realloc(ab->b, new_len);
   if (new == NULL)
     return;
-  memcpy(&new[ab->len], s, len);
+  // TODO offset
+  memcpy(&new[ab->len], s + offset, len);
   ab->b = new;
   ab->len = new_len;
 }
 
 void abuf_free(struct abuf *ab) { free(ab->b); }
 
+void next_char(char *text, int *i, int) {
+  char c = text[*i];
+  u8_length(c)
+}
+
+void append_row(int row, int offset_cols) {
+  int display_size = 0;
+  int i = 0;
+
+  while (display_size < E.screen_cols + offset_cols) {
+    char c = E.row[row][i];
+    i = i + u8_length(c);
+    offset_cols = offset_cols u8_display_width(c);
+  }
+}
+
 /*** update screen ***/
 void editor_draw_rows(struct abuf *ab) {
   for (int y = 0; y < E.screen_rows; y++) {
     if (y >= E.num_rows) {
-      abuf_append(ab, "~", 1);
+      abuf_append(ab, "~", 1, 0);
     } else {
-      // TODO E.row.display_cols 
+      // TODO E.row.display_cols
       int len = MIN(E.row[y].size, E.screen_cols);
-      abuf_append(ab, E.row[y].chars, len);
+      abuf_append(ab, E.row[y].chars, len, 0);
     }
     // clear line
-    abuf_append(ab, "\x1b[K", 4);
+    abuf_append(ab, "\x1b[K", 4, 0);
     if (y < E.screen_rows - 1) {
-      abuf_append(ab, "\r\n", 2);
+      abuf_append(ab, "\r\n", 2, 0);
     }
   }
 }
@@ -142,22 +161,22 @@ void editor_draw_rows(struct abuf *ab) {
 void position_cursor(struct abuf *ab) {
   char buf[32];
   snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
-  abuf_append(ab, buf, strlen(buf));
+  abuf_append(ab, buf, strlen(buf), 0);
 }
 
 void editor_refresh_screen() {
   struct abuf ab = ABUF_INIT;
   // hide cursor
-  abuf_append(&ab, "\x1b[?25l", 6);
+  abuf_append(&ab, "\x1b[?25l", 6, 0);
 
-  abuf_append(&ab, "\x1b[H", 3);
+  abuf_append(&ab, "\x1b[H", 3, 0);
 
   editor_draw_rows(&ab);
 
   position_cursor(&ab);
 
   // show cursor again
-  abuf_append(&ab, "\x1b[?25h", 6);
+  abuf_append(&ab, "\x1b[?25h", 6, 0);
 
   write(STDOUT_FILENO, ab.b, ab.len);
 

@@ -10,6 +10,7 @@
 #include "./input.h"
 #include "./trie.h"
 #include "./utils.h"
+#include "./u8.h"
 
 // Internal Match
 #define IS_ASCII(b) (((b)&0x80) == 0)
@@ -20,16 +21,6 @@
 #define IS_RET(b) (b == 13)
 #define IS_TAB(b) (b == 9)
 
-static uint8_t const _UTF8_LENGTH[16] = {
-    // maps the leading 4 bits to length
-    // 0 1 2 3  4 5 6 7  ascii
-    1, 1, 1, 1, 1, 1, 1, 1,
-    // 8 9 a b           invalid
-    0, 0, 0, 0,
-    // c d e f           starter
-    2, 2, 3, 4};
-
-#define UTF8_LENGTH(starter) _UTF8_LENGTH[starter >> 4]
 #define IS_UTF8_START(b) (((b)&0xc0) == 0xc0)
 #define IS_UTF8_PART(b) ((b & (1 << 7)) && !(b & (1 << 6)))
 
@@ -257,11 +248,11 @@ void _update_key_events(InputHandler h) {
       break;
     }
     if (IS_UTF8_START(c)) {
-      if (UTF8_LENGTH(c) == n + 1) {
+      if (u8_length(c) == n + 1) {
         // last char is complete utf8
         n = 0;
         break;
-      } else if (UTF8_LENGTH(c) > n + 1) {
+      } else if (u8_length(c) > n + 1) {
         // trailing utf8 bytes
         n++; // add the starter
         break;
@@ -315,7 +306,7 @@ void _update_key_events(InputHandler h) {
     }
 
     if (IS_UTF8_START(first)) {
-      int utf8_len = UTF8_LENGTH(first);
+      int utf8_len = u8_length(first);
       i = _write_event(h, KEY_CHAR, "Letter", utf8_len, &work[i], i);
     }
   }

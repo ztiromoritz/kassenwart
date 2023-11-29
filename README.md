@@ -20,3 +20,5 @@ Next steps
  * https://stackoverflow.com/questions/47201087/gcc-how-to-use-address-sanitizer
  * https://valgrind.org/
  * https://sw.kovidgoyal.net/kitty/keyboard-protocol/
+ * https://github.com/unicode-rs/unicode-width
+ * https://github.com/unicode-rs/unicode-width/issues/4 

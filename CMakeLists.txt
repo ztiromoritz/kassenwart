@@ -38,8 +38,8 @@ add_link_options( "-fsanitize=address" )
 
 ## debugging and learning
 ## kilo / https://viewsourcecode.org/snaptoken/kilo
-add_executable(editor src/trie.c src/input.c src/utils.c src/raw.c editor.c)
-add_executable(input-test src/trie.c src/input.c src/utils.c src/raw.c input-test.c)
+add_executable(editor src/u8.c src/trie.c src/input.c src/utils.c src/raw.c editor.c)
+add_executable(input-test src/u8.c src/trie.c src/input.c src/utils.c src/raw.c input-test.c)
 add_executable(trie-test src/trie.c trie-test.c)
 
 ## Experiment with reading and writing key strokes
