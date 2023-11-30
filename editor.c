@@ -131,18 +131,23 @@ void next_char(char *text, int *i, int) {
   //u8_length(c)
 }
 
-void append_row(int row, int offset_cols) {
-  int display_size = 0;
+*/
+
+void append_row(struct abuf *ab, int row, int offset_cols) {
+  int cols = 0;
   int i = 0;
 
-  while (display_size < E.screen_cols + offset_cols) {
-    char c = E.row[row][i];
-    i = i + u8_length(c);
-    //offset_cols = offset_cols u8_display_width(c);
-  }
-}
+  erow r = E.row[row];
 
-*/
+  while (cols < E.screen_cols + offset_cols && i < r.size) {
+    uint8_t len;
+    uint8_t col_size;
+    u8_next(&r.chars[i], &len, &col_size);
+    i = i + len;
+    cols = cols + col_size;
+  }
+  abuf_append(ab, r.chars, i, 0);
+}
 
 /*** update screen ***/
 void editor_draw_rows(struct abuf *ab) {
@@ -150,9 +155,14 @@ void editor_draw_rows(struct abuf *ab) {
     if (y >= E.num_rows) {
       abuf_append(ab, "~", 1, 0);
     } else {
+      /*
       // TODO E.row.display_cols
       int len = MIN(E.row[y].size, E.screen_cols);
       abuf_append(ab, E.row[y].chars, len, 0);
+      */
+      // TODO: quick hack, re calculates the col_width
+      // of a char again and again.
+      append_row(ab, y, 0);
     }
     // clear line
     abuf_append(ab, "\x1b[K", 4, 0);
