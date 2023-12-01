@@ -23,3 +23,4 @@ Next steps
  * https://github.com/unicode-rs/unicode-width
  * https://github.com/unicode-rs/unicode-width/issues/4 
  * https://github.com/neovim/neovim/blob/master/src/unicode/emoji-data.txt
+ * https://floooh.github.io/2019/09/27/modern-c-for-cpp-peeps.html

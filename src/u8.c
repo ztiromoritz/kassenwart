@@ -96,7 +96,7 @@ void u8_next(unsigned char *c, uint8_t *out_length,
   (*out_length) = len;
 
   switch (len) {
-  case 0: // invalide TODO:
+  case 0: // invalid TODO:
   case 1:
     codepoint = c[0];
     (*out_display_width) = 1;
@@ -112,6 +112,7 @@ void u8_next(unsigned char *c, uint8_t *out_length,
                 (c[3] & 0x3F);
     break;
   }
+
 
   if (u_is_double_width(codepoint)) {
     (*out_display_width) = 2;

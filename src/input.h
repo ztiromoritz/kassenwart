@@ -66,7 +66,7 @@
 
 
 struct _key_event {
-  uint8_t type; // KEY_* 
+  uint8_t type; 
   char *name; 
   uint8_t len;
   char *raw; 

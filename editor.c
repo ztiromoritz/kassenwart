@@ -21,12 +21,23 @@
 
 /*** data ***/
 typedef struct erow {
+  // The size in byte
   int size;
+  // The chars string without '\0' termination
   char *chars;
-  // wcwidth()
-  // https://stackoverflow.com/questions/3634627/how-to-know-the-preferred-display-width-in-columns-of-unicode-characters
-  // TODO: int display_width; //rendered size respecting unicode chars
-  // T H I S   I S   T H E   N E X T   S T E P ! ! !
+
+  // A cache for the characters col size in monospace font
+  int8_t *col_sizes_cache;
+  
+  // The col_sizes_cache should be keept in sync with the chars stream and thus have the same size
+  // It should be inititalized with all values -1 not Calculated
+  //
+  // Its should be filled like this:
+  // Text:              a    ö         🐻                 
+  // chars:             0x61 0xC3 0xB6 0xF0 0x9F 0x90 0xBB
+  // col_sizes_cache:   1    1    -1   2    -1   -1   -1    // we could maybe skip the -1 filler and do more index magic
+  //
+  // Note: its not the length of the encode char in bytes, this will be calculated on the fly!
 
 } erow;
 
@@ -123,15 +134,6 @@ void abuf_append(struct abuf *ab, const char *s, int len, int offset) {
 }
 
 void abuf_free(struct abuf *ab) { free(ab->b); }
-/*
-TODO:
-
-void next_char(char *text, int *i, int) {
-  char c = text[*i];
-  //u8_length(c)
-}
-
-*/
 
 void append_row(struct abuf *ab, int row, int offset_cols) {
   int cols = 0;
