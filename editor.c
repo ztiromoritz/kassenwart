@@ -28,26 +28,39 @@ typedef struct erow {
 
   // A cache for the characters col size in monospace font
   int8_t *col_sizes_cache;
-  
-  // The col_sizes_cache should be keept in sync with the chars stream and thus have the same size
-  // It should be inititalized with all values -1 not Calculated
+
+  // The col_sizes_cache should be keept in sync with the chars stream and thus
+  // have the same size It should be inititalized with all values -1 not
+  // Calculated
   //
   // Its should be filled like this:
-  // Text:              a    ö         🐻                 
+  // Text:              a    ö         🐻
   // chars:             0x61 0xC3 0xB6 0xF0 0x9F 0x90 0xBB
-  // col_sizes_cache:   1    1    -1   2    -1   -1   -1    // we could maybe skip the -1 filler and do more index magic
+  // col_sizes_cache:   1    1    -1   2    -1   -1   -1    // we could maybe
+  // skip the -1 filler and do more index magic
   //
-  // Note: its not the length of the encode char in bytes, this will be calculated on the fly!
+  // Note: its not the length of the encode char in bytes, this will be
+  // calculated on the fly!
 
 } erow;
 
 /*** editor state ***/
 struct editor_config {
+  // Cursor position within the
+  // visual rows/columns of the text data
   int cx;
   int cy;
+  // Offset between the screen origin and
+  // the origin of the text data
+  int row_off;
+  int col_off;
+
+  // screen size
   int screen_rows;
   int screen_cols;
-  int num_rows;
+
+  // text data
+  int file_rows;
   erow *row;
 };
 
@@ -65,13 +78,14 @@ void editor_process_keypress(KeyEvent e) {
     E.cy = MAX(E.cy - 1, 0);
     break;
   case KEY_ARROW_DOWN:
-    E.cy = MIN(E.cy + 1, E.screen_rows - 1);
+    E.cy = MIN(E.cy + 1, E.file_rows - 1);
     break;
   case KEY_ARROW_LEFT:
     E.cx = MAX(E.cx - 1, 0);
     break;
   case KEY_ARROW_RIGHT:
-    E.cx = MIN(E.cx + 1, E.screen_cols - 1);
+    // E.cx = MIN(E.cx + 1, E.screen_cols - 1);
+    E.cx++; // Boundary ??
     break;
   }
 }
@@ -135,13 +149,13 @@ void abuf_append(struct abuf *ab, const char *s, int len, int offset) {
 
 void abuf_free(struct abuf *ab) { free(ab->b); }
 
-void append_row(struct abuf *ab, int row, int offset_cols) {
+void append_row(struct abuf *ab, int row) {
   int cols = 0;
   int i = 0;
 
   erow r = E.row[row];
 
-  while (cols < E.screen_cols + offset_cols && i < r.size) {
+  while (cols < E.screen_cols + E.col_off && i < r.size) {
     uint8_t len;
     uint8_t col_size;
     u8_next(&r.chars[i], &len, &col_size);
@@ -153,18 +167,13 @@ void append_row(struct abuf *ab, int row, int offset_cols) {
 
 /*** update screen ***/
 void editor_draw_rows(struct abuf *ab) {
+  int file_row;
   for (int y = 0; y < E.screen_rows; y++) {
-    if (y >= E.num_rows) {
+    file_row = y + E.row_off;
+    if (file_row >= E.file_rows) {
       abuf_append(ab, "~", 1, 0);
     } else {
-      /*
-      // TODO E.row.display_cols
-      int len = MIN(E.row[y].size, E.screen_cols);
-      abuf_append(ab, E.row[y].chars, len, 0);
-      */
-      // TODO: quick hack, re calculates the col_width
-      // of a char again and again.
-      append_row(ab, y, 0);
+      append_row(ab, file_row);
     }
     // clear line
     abuf_append(ab, "\x1b[K", 4, 0);
@@ -174,14 +183,31 @@ void editor_draw_rows(struct abuf *ab) {
   }
 }
 
+void editor_scroll() {
+  if (E.cy < E.row_off) {
+    E.row_off = E.cy;
+  }
+  if (E.cy >= E.row_off + E.screen_rows) {
+    E.row_off = E.cy - E.screen_rows + 1;
+  }
+  if (E.cx < E.col_off) {
+    E.col_off = E.cx;
+  }
+  if (E.cx >= E.col_off + E.screen_cols) {
+    E.col_off = E.cx - E.screen_cols + 1;
+  }
+}
+
 void position_cursor(struct abuf *ab) {
   char buf[32];
-  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
+  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy - E.row_off + 1, E.cx + 1);
   abuf_append(ab, buf, strlen(buf), 0);
 }
 
 void editor_refresh_screen() {
   struct abuf ab = ABUF_INIT;
+
+  editor_scroll();
   // hide cursor
   abuf_append(&ab, "\x1b[?25l", 6, 0);
 
@@ -202,14 +228,14 @@ void editor_refresh_screen() {
 /*** file i/o ***/
 
 void editor_append_row(char *s, size_t len) {
-  E.row = realloc(E.row, sizeof(erow) * (E.num_rows + 1));
+  E.row = realloc(E.row, sizeof(erow) * (E.file_rows + 1));
 
-  int at = E.num_rows;
+  int at = E.file_rows;
   E.row[at].size = len;
   E.row[at].chars = malloc(len + 1);
   E.row[at].chars[len] = '\0';
   memcpy(E.row[at].chars, s, len);
-  E.num_rows++;
+  E.file_rows++;
 }
 
 void editor_open(char *filename) {
@@ -237,7 +263,9 @@ void init_editor() {
   // init cursor position
   E.cx = 0;
   E.cy = 0;
-  E.num_rows = 0;
+  E.row_off = 0;
+  E.col_off = 0;
+  E.file_rows = 0;
   E.row = NULL;
 
   if (get_window_size(&E.screen_rows, &E.screen_cols) == -1)
