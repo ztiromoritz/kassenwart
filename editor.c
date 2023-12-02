@@ -136,33 +136,72 @@ struct abuf {
 #define ABUF_INIT                                                              \
   { NULL, 0 }
 
-void abuf_append(struct abuf *ab, const char *s, int len, int offset) {
-  int new_len = ab->len + len - offset;
+void abuf_append(struct abuf *ab, const char *s, int len) {
+  int new_len = ab->len + len;
   char *new = realloc(ab->b, new_len);
   if (new == NULL)
     return;
-  // TODO offset
-  memcpy(&new[ab->len], s + offset, len);
+  memcpy(&new[ab->len], s, len);
   ab->b = new;
   ab->len = new_len;
 }
 
 void abuf_free(struct abuf *ab) { free(ab->b); }
 
+
 void append_row(struct abuf *ab, int row) {
   int cols = 0;
-  int i = 0;
+  int len = 0;
+  int char_offset = 0;
+  int pad_left = 0;  
+  int pad_right = 0; 
+		     
+  uint8_t letter_len;
+  uint8_t letter_cols;
 
   erow r = E.row[row];
 
-  while (cols < E.screen_cols + E.col_off && i < r.size) {
-    uint8_t len;
-    uint8_t col_size;
-    u8_next(&r.chars[i], &len, &col_size);
-    i = i + len;
-    cols = cols + col_size;
+  while (cols < E.screen_cols + E.col_off && len < r.size) {
+    // TODO: use cached values
+    u8_next(&r.chars[len], &letter_len, &letter_cols);
+    len = len + letter_len;
+    if (cols < E.col_off) {
+      // As long as we handle letters below the column offset
+      // we update the char offset. 
+      char_offset = len;
+      if (cols + letter_cols > E.col_off) {
+	// The current letter exceeds the offset
+	// 
+	// It starts offscreen 
+	// and is only partially visible
+	// So its visible cols will replaced
+	// by a padding character.
+	//
+	// In reality this only handles 
+	// the two coulmn double wide unicod letters.
+	// So pad_left is either be 0 or 1
+        pad_left = cols + letter_cols - E.col_off;
+      }
+    }
+    cols = cols + letter_cols;
   }
-  abuf_append(ab, r.chars, i, 0);
+
+  // Check how many cols of the last char are offscreen.
+  uint8_t margin_right = cols - (E.screen_cols + E.col_off);
+  if (margin_right > 0) {
+    // Last character should not be printed
+    len-=letter_len;
+    // Calculate how wide the visible part of the letter is
+    pad_right = letter_cols - margin_right;
+  }
+
+  for (int s = 0; s < pad_left; s++) {
+    abuf_append(ab, "<", 1);
+  }
+  abuf_append(ab, &(r.chars[char_offset]), len - char_offset);
+  for (int s = 0; s < pad_right; s++) {
+    abuf_append(ab, "<", 1);
+  }
 }
 
 /*** update screen ***/
@@ -171,14 +210,14 @@ void editor_draw_rows(struct abuf *ab) {
   for (int y = 0; y < E.screen_rows; y++) {
     file_row = y + E.row_off;
     if (file_row >= E.file_rows) {
-      abuf_append(ab, "~", 1, 0);
+      abuf_append(ab, "~", 1);
     } else {
       append_row(ab, file_row);
     }
     // clear line
-    abuf_append(ab, "\x1b[K", 4, 0);
+    abuf_append(ab, "\x1b[K", 4);
     if (y < E.screen_rows - 1) {
-      abuf_append(ab, "\r\n", 2, 0);
+      abuf_append(ab, "\r\n", 2);
     }
   }
 }
@@ -200,8 +239,9 @@ void editor_scroll() {
 
 void position_cursor(struct abuf *ab) {
   char buf[32];
-  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy - E.row_off + 1, E.cx + 1);
-  abuf_append(ab, buf, strlen(buf), 0);
+  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy - E.row_off + 1,
+           E.cx - E.col_off + 1);
+  abuf_append(ab, buf, strlen(buf));
 }
 
 void editor_refresh_screen() {
@@ -209,16 +249,16 @@ void editor_refresh_screen() {
 
   editor_scroll();
   // hide cursor
-  abuf_append(&ab, "\x1b[?25l", 6, 0);
+  abuf_append(&ab, "\x1b[?25l", 6);
 
-  abuf_append(&ab, "\x1b[H", 3, 0);
+  abuf_append(&ab, "\x1b[H", 3);
 
   editor_draw_rows(&ab);
 
   position_cursor(&ab);
 
   // show cursor again
-  abuf_append(&ab, "\x1b[?25h", 6, 0);
+  abuf_append(&ab, "\x1b[?25h", 6);
 
   write(STDOUT_FILENO, ab.b, ab.len);
 
